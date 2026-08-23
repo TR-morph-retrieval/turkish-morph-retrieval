@@ -48,7 +48,15 @@ def jaccard(left: set, right: set) -> float:
 
 
 def _contains_word(text: str, word: str) -> bool:
-    return tr_lower(word).strip(".,;:!?()[]{}\"'") in tr_lower(text)
+    word_toks = tokens(word)
+    if not word_toks:
+        return False
+    text_toks = tokens(text)
+    len_w = len(word_toks)
+    len_t = len(text_toks)
+    if len_w > len_t:
+        return False
+    return any(text_toks[i : i + len_w] == word_toks for i in range(len_t - len_w + 1))
 
 
 def _critical_skeleton(sentence: str, critical_word: str) -> list[str] | None:

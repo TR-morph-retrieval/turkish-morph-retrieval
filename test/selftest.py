@@ -24,7 +24,7 @@ from .prompts import (
     build_repair_prompt,
     build_semantic_judge_prompt,
 )
-from .evaluation import evaluate_run, validate_binary_qrels
+from .evaluation import _remove_once, evaluate_run, validate_binary_qrels
 from .morphology import _expected_feature_check
 from .judge_report import judge_calibration_report
 from .planner import build_plan, make_slot, plan_statistics
@@ -41,6 +41,7 @@ from .review import apply_human_reviews, export_human_review
 from .selection import select_balanced
 from .taxonomy import FEATURES, FEATURE_BY_KEY, hard_profile
 from .validators import (
+    _contains_word,
     corpus_problems,
     interpret_morphology_judge,
     interpret_semantic_judges,
@@ -166,6 +167,27 @@ def run() -> list[str]:
         failures.append("binary qrels relevance=2 değerini reddetmedi")
     except ValueError:
         pass
+
+    # Regression: _contains_word must match token sequences, not arbitrary substrings
+    if _contains_word("fiyatları hızla arttı", "at"):
+        failures.append("_contains_word 'fiyat' içindeki 'at' alt-dizesini hatalı kabul etti")
+    if not _contains_word("topu bana doğru at", "at"):
+        failures.append("_contains_word tam belirteç olan 'at' sözcüğünü bulamadı")
+    if not _contains_word("keşke haberi duyurmuş olsaydı", "duyurmuş olsaydı"):
+        failures.append("_contains_word çoklu belirteç öbeğini bulamadı")
+
+    # Regression: _remove_once must respect Turkish word boundaries during ablation
+    ablated_sample = _remove_once("Ahmet balkonda oturdu ve kalemi al.", "al")
+    if ablated_sample != "Ahmet balkonda oturdu ve kalemi [MASK].":
+        failures.append(f"_remove_once sözcük sınırını ihlal etti: {ablated_sample}")
+
+    # Regression: evaluate_run truncated rankings must report retrieved-only statistics
+    trunc_summary, _ = evaluate_run(
+        {"q1": {"d1": 1.0}, "q2": {"d2": 1.0}},
+        {"q1": ["d1", "x"], "q2": ["other1", "other2"]},
+    )
+    if "mean_rank" in trunc_summary or trunc_summary.get("mean_rank_retrieved") != 1.0 or trunc_summary.get("retrieved_ratio") != 0.5:
+        failures.append(f"truncated ranking metrikleri yanlış: {trunc_summary}")
 
     cfg = load_config(runtime=False)
     slots_600 = build_plan(cfg, 600)

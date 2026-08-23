@@ -44,15 +44,19 @@ from morph_taxonomy import TARGET_FEATURES
 HERE = Path(__file__).resolve().parent
 DATA_DIR = HERE / "data_morph_v2"
 
+_ZEYREK_INIT_ERROR = None
 try:
     import zeyrek
     # zeyrek's rule-based analyzer logs every candidate parse path at WARNING level (its own
     # library bug — this is debug-level tracing, not a warning) — one line per ambiguous parse,
     # so a 600-item dataset floods stdout with thousands of "APPENDING RESULT: ..." lines.
     logging.getLogger("zeyrek").setLevel(logging.ERROR)
-    _ANALYZER = zeyrek.MorphAnalyzer()
-except Exception:                                          # noqa: BLE001 - optional dependency
+    _cand = zeyrek.MorphAnalyzer()
+    _ = _cand.analyze("kitap")
+    _ANALYZER = _cand
+except Exception as _exc:                                  # noqa: BLE001 - optional dependency
     _ANALYZER = None
+    _ZEYREK_INIT_ERROR = f"{type(_exc).__name__}: {_exc}"
 
 # --------------------------------------------------------------------------- allomorph table
 _PAREN_RE = re.compile(r"\(([^)]*)\)")
@@ -549,6 +553,7 @@ def annotate_dataset(items, use_zeyrek=True):
         },
         "disagreement_examples": disagreement_examples,
         "zeyrek_available": _ANALYZER is not None,
+        "zeyrek_init_error": _ZEYREK_INIT_ERROR,
         "zeyrek_parse_rate_pct": round(100 * stats["zeyrek_parsed"] / n, 1),
         "zeyrek_target_feature_agreement": {
             "agree": zy_tf_agree[True], "disagree": zy_tf_agree[False],

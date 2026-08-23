@@ -105,11 +105,18 @@ def evaluate_run(
     if valid_ranks:
         ordered_ranks = sorted(valid_ranks)
         midpoint = len(ordered_ranks) // 2
-        summary["mean_rank"] = sum(ordered_ranks) / len(ordered_ranks)
-        summary["median_rank"] = (
+        mean_rank = sum(ordered_ranks) / len(ordered_ranks)
+        median_rank = (
             float(ordered_ranks[midpoint]) if len(ordered_ranks) % 2
             else (ordered_ranks[midpoint - 1] + ordered_ranks[midpoint]) / 2
         )
+        if len(valid_ranks) == len(per_query):
+            summary["mean_rank"] = mean_rank
+            summary["median_rank"] = median_rank
+        else:
+            summary["mean_rank_retrieved"] = mean_rank
+            summary["median_rank_retrieved"] = median_rank
+            summary["retrieved_ratio"] = len(valid_ranks) / max(1, len(per_query))
     return summary, per_query
 
 
@@ -399,11 +406,21 @@ def candidate_only_classifier(dev_items: list[dict], test_items: list[dict]) -> 
     return {"summary": summary, "per_query": per_query, "run": run}
 
 
+_TR_CHAR_CLASS = r"[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]"
+
+
 def _remove_once(text: str, word: str) -> str:
+    import re
     if not word or not word.strip():
         return text
-    pattern = re_escape_word(word)
-    return " ".join(__import__("re").sub(pattern, "[MASK]", text, count=1, flags=__import__("re").I).split())
+    cleaned_word = word.strip()
+    escaped = re_escape_word(cleaned_word)
+    pattern = rf"(?<!{_TR_CHAR_CLASS}){escaped}(?!{_TR_CHAR_CLASS})"
+    replaced, n = re.subn(pattern, "[MASK]", text, count=1, flags=re.IGNORECASE)
+    if n == 0:
+        pattern = re_escape_word(cleaned_word)
+        replaced = re.sub(pattern, "[MASK]", text, count=1, flags=re.IGNORECASE)
+    return " ".join(replaced.split())
 
 
 def re_escape_word(word: str) -> str:
