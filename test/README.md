@@ -101,8 +101,9 @@ Provider-facing üretim JSON'u bilerek küçüktür. LLM yalnız query, ortak co
 lemma/query sözcüğü ve her aday için `candidate_slot + critical_sentence + critical_word`
 yazar. Rol, subtype, `morph_relation`, qrels, edit script, feature açıklaması ve kimlikler
 güvenilir plandan Python tarafından eklenir. Böylece model onlarca sabit metadata alanını her
-family'de tekrar üretmez. Yerel repair çağrısı bu küçük önceki JSON'u görür ve yalnız judge'ın
-işaretlediği candidate slotlarını değiştirir; family-geneli hatalarda kontrollü geniş onarım yapar.
+family'de tekrar üretmez. Yerel repair çağrısı yalnız judge'ın işaretlediği candidate slotlarının
+iki metin alanını döndürür; Python bu yamayı eski JSON'a uygular ve diğer family alanlarını teknik
+olarak kilitli tutar. Family-geneli hatalarda kontrollü geniş onarım yapar.
 
 Easy negatifler rastgele konu dışı cümleler değildir. Query ile aynı domain/register içinde
 kalır; mümkünse kişi, kurum, yer veya konu ipuçlarından birini paylaşır, fakat farklı bir olay

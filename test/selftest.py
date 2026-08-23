@@ -19,6 +19,7 @@ from .prompts import (
     _blind_candidates,
     build_generation_batch_prompt,
     build_generation_prompt,
+    build_local_candidate_repair_prompt,
     build_morphology_judge_prompt,
     build_repair_prompt,
     build_semantic_judge_prompt,
@@ -29,11 +30,12 @@ from .judge_report import judge_calibration_report
 from .planner import build_plan, make_slot, plan_statistics
 from .pipeline import (
     _group_slots_by_generator,
+    _apply_local_candidate_repairs,
     _process_generation_batch,
     _process_slot,
     _resume_refill_rounds,
 )
-from .schema import generation_batch_schema
+from .schema import generation_batch_schema, localized_repair_schema
 from .providers import ClaudeCliProvider
 from .review import apply_human_reviews, export_human_review
 from .selection import select_balanced
@@ -535,9 +537,21 @@ def run() -> list[str]:
             self.calls = 0
             self.invalid_calls = invalid_calls
 
-        def call_json(self, *_args):
+        def call_json(self, _system, _prompt, schema, _task):
             self.calls += 1
-            return response({} if self.calls <= self.invalid_calls else _fixture_raw(), self.calls)
+            if self.calls <= self.invalid_calls:
+                return response({}, self.calls)
+            if schema.get("name") == "turkish_morph_candidate_repair":
+                wanted = set(
+                    schema["schema"]["properties"]["candidates"]["items"]
+                    ["properties"]["candidate_slot"]["enum"]
+                )
+                patches = [
+                    row for row in _fixture_raw()["candidates"]
+                    if row["candidate_slot"] in wanted
+                ]
+                return response({"candidates": patches}, self.calls)
+            return response(_fixture_raw(), self.calls)
 
     class SemanticJudge:
         def __init__(self, rejected_calls=0):
@@ -570,7 +584,13 @@ def run() -> list[str]:
         start_refill_round=4,
     )
     if status != "accepted" or generator.calls != 2 or refilled["provenance"]["refill_round"] != 5:
-        failures.append("judge reddinden sonra taze refill çalışmadı")
+        failures.append(
+            "judge reddinden sonra taze refill çalışmadı: "
+            f"status={status}, calls={generator.calls}, "
+            f"round={refilled.get('provenance', {}).get('refill_round')}, "
+            f"attempts={refilled.get('provenance', {}).get('generator_attempts')}, "
+            f"history={refilled.get('provenance', {}).get('rejected_replacements')}"
+        )
     low_confidence_semantic = deepcopy(semantic_judge)
     low_confidence_semantic["confidence"] = 60
     low_confidence_semantic["abstain"] = True
@@ -734,6 +754,29 @@ def _check_refill_round_nonce(cfg) -> list[str]:
     repairs = [build_repair_prompt({**slot, "refill_round": r}, {}, ["x"]) for r in range(3)]
     if len(set(repairs)) != 3:
         failures.append("repair prompt'u refill turları arasında ayrışmıyor")
+    previous = _fixture_raw()
+    candidate_slot = "hard_01"
+    patch_payload = {"candidates": [{
+        "candidate_slot": candidate_slot,
+        "critical_sentence": "Ece bugün raporu arşive bırakmadı.",
+        "critical_word": "bırakmadı",
+    }]}
+    repaired = _apply_local_candidate_repairs(previous, patch_payload, [candidate_slot])
+    before_others = [row for row in previous["candidates"] if row["candidate_slot"] != candidate_slot]
+    after_others = [row for row in repaired["candidates"] if row["candidate_slot"] != candidate_slot]
+    if before_others != after_others or previous["query"] != repaired["query"]:
+        failures.append("local candidate repair sağlam family alanlarını değiştirdi")
+    changed = next(row for row in repaired["candidates"] if row["candidate_slot"] == candidate_slot)
+    if changed["critical_word"] != "bırakmadı":
+        failures.append("local candidate repair hedef slotu güncellemedi")
+    local_schema = localized_repair_schema([candidate_slot])
+    local_prompt = build_local_candidate_repair_prompt(
+        slot, previous, ["fixture candidate hatası"], [candidate_slot]
+    )
+    if local_schema["schema"]["properties"]["candidates"]["maxItems"] != 1:
+        failures.append("local repair şeması tek adayla sınırlı değil")
+    if candidate_slot not in local_prompt or "yalnız" not in local_prompt.lower():
+        failures.append("local repair prompt'u hedef adayı sınırlamıyor")
     return failures
 
 
@@ -796,6 +839,23 @@ def _check_generation_batching(cfg) -> list[str]:
         )
     if len(calls) != 1 or len(outcomes) != len(batch):
         failures.append("üçlü batch tek provider çağrısından üç family üretmedi")
+
+    def one_family_fails(*args):
+        if args[0]["slot_id"] == batch[0]["slot_id"]:
+            raise RuntimeError("fixture family error")
+        return "accepted", {"slot_id": args[0]["slot_id"]}
+
+    with patch("test.pipeline._process_slot", side_effect=one_family_fails):
+        isolated = _process_generation_batch(
+            entries,
+            cfg,
+            {batch[0]["generator_id"]: FakeGenerator()},
+            {},
+            None,
+            threading.Lock(),
+        )
+    if [row[2] for row in isolated] != ["failed", "accepted", "accepted"]:
+        failures.append("tek family istisnası batch kardeşlerine yayıldı")
     return failures
 
 

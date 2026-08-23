@@ -72,6 +72,40 @@ def generation_batch_schema(size: int) -> dict:
     }
 
 
+def localized_repair_schema(repair_slots: list[str]) -> dict:
+    """Return only the candidate fields Python is allowed to replace."""
+    slots = sorted(set(repair_slots))
+    if not slots:
+        raise ValueError("localized repair en az bir candidate_slot ister")
+    candidate_patch = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "candidate_slot": {"type": "string", "enum": slots},
+            "critical_sentence": {"type": "string", "minLength": 8},
+            "critical_word": {"type": "string", "minLength": 1},
+        },
+        "required": ["candidate_slot", "critical_sentence", "critical_word"],
+    }
+    return {
+        "name": "turkish_morph_candidate_repair",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "minItems": len(slots),
+                    "maxItems": len(slots),
+                    "items": candidate_patch,
+                }
+            },
+            "required": ["candidates"],
+        },
+    }
+
+
 SEMANTIC_JUDGE_SCHEMA = {
     "name": "blind_semantic_retrieval_judgment",
     "strict": True,

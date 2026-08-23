@@ -10,6 +10,7 @@ import threading
 import time
 from collections import Counter
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +28,7 @@ from .prompts import (
     build_adjudicator_prompt,
     build_generation_batch_prompt,
     build_generation_prompt,
+    build_local_candidate_repair_prompt,
     build_morphology_judge_prompt,
     build_repair_prompt,
     build_semantic_judge_prompt,
@@ -38,6 +40,7 @@ from .schema import (
     MORPHOLOGY_JUDGE_SCHEMA,
     SEMANTIC_JUDGE_SCHEMA,
     generation_batch_schema,
+    localized_repair_schema,
 )
 from .validators import (
     interpret_morphology_judge,
@@ -205,6 +208,32 @@ def _request_provenance(response) -> dict[str, Any]:
     }
 
 
+def _apply_local_candidate_repairs(
+    previous: dict[str, Any], patch: dict[str, Any], repair_slots: list[str]
+) -> dict[str, Any]:
+    expected = set(repair_slots)
+    rows = patch.get("candidates", [])
+    received = [row.get("candidate_slot") for row in rows if isinstance(row, dict)]
+    if len(received) != len(expected) or set(received) != expected:
+        raise ValueError(
+            f"local repair slotları uyuşmuyor; beklenen={sorted(expected)}, gelen={received}"
+        )
+    repaired = deepcopy(previous)
+    replacements = {row["candidate_slot"]: row for row in rows}
+    found = set()
+    for candidate in repaired.get("candidates", []):
+        slot = candidate.get("candidate_slot")
+        if slot in replacements:
+            candidate.update({
+                "critical_sentence": replacements[slot]["critical_sentence"],
+                "critical_word": replacements[slot]["critical_word"],
+            })
+            found.add(slot)
+    if found != expected:
+        raise ValueError(f"önceki family local repair slotlarını taşımıyor: {sorted(expected - found)}")
+    return repaired
+
+
 def _process_slot(
     slot, cfg, generators, judges, start_refill_round: int = 0, stage_callback=None,
     memory_validator=None, initial_generation=None, generator_lock=None,
@@ -246,6 +275,10 @@ def _process_slot(
         validation_problems: list[str] = []
         family = None
         for attempt in range(max_attempts):
+            repair_slots: list[str] = []
+            response_schema = GENERATION_SCHEMA
+            response_task = "generate_test_family"
+            repair_base: dict[str, Any] = {}
             if attempt == 0 and not refill_history and initial_generation is not None:
                 previous, provenance = initial_generation
                 generation_provenance.append(provenance)
@@ -275,27 +308,48 @@ def _process_slot(
             else:
                 feedback = validation_problems if attempt else last_problems
                 normalized_feedback = family if attempt else last_family
-                prompt = build_repair_prompt(
-                    prompt_slot,
-                    previous or last_raw or {},
-                    feedback,
-                    repair_slots_for(feedback, normalized_feedback),
-                )
+                repair_slots = repair_slots_for(feedback, normalized_feedback)
+                repair_base = previous or last_raw or {}
+                if repair_slots:
+                    prompt = build_local_candidate_repair_prompt(
+                        prompt_slot, repair_base, feedback, repair_slots
+                    )
+                    response_schema = localized_repair_schema(repair_slots)
+                    response_task = "repair_test_candidates"
+                else:
+                    prompt = build_repair_prompt(prompt_slot, repair_base, feedback)
+                    response_schema = GENERATION_SCHEMA
+                    response_task = "repair_test_family"
             if generator_lock:
                 with generator_lock:
                     response = generator.call_json(
-                        GENERATOR_SYSTEM, prompt, GENERATION_SCHEMA, "generate_test_family"
+                        GENERATOR_SYSTEM, prompt, response_schema, response_task
                     )
             else:
                 response = generator.call_json(
-                    GENERATOR_SYSTEM, prompt, GENERATION_SCHEMA, "generate_test_family"
+                    GENERATOR_SYSTEM, prompt, response_schema, response_task
                 )
             if stage_callback:
                 stage_callback("generated", {"refill_round": refill_round, "attempt": attempt})
-            generation_provenance.append(_request_provenance(response))
-            previous = response.data
+            provenance = _request_provenance(response)
+            if repair_slots:
+                provenance["localized_repair_slots"] = repair_slots
+                try:
+                    previous = _apply_local_candidate_repairs(
+                        repair_base, response.data, repair_slots
+                    )
+                except Exception as exc:
+                    validation_problems = [
+                        f"local repair birleştirme hatası: {type(exc).__name__}: {exc}"
+                    ]
+                    generation_provenance.append(provenance)
+                    family = None
+                    continue
+            else:
+                previous = response.data
+            generation_provenance.append(provenance)
             try:
-                family = normalize_family(response.data, slot)
+                family = normalize_family(previous, slot)
                 validation_problems = validate_family(family, slot, cfg)
             except Exception as exc:
                 validation_problems = [f"normalizasyon hatası: {type(exc).__name__}: {exc}"]
@@ -534,17 +588,25 @@ def _process_generation_batch(entries, cfg, generators, judges, memory_validator
                     "batch_member_index": index,
                 },
             )
-        status, record = _process_slot(
-            slot,
-            cfg,
-            generators,
-            judges,
-            entry["start_refill_round"],
-            entry["stage_callback"],
-            memory_validator,
-            initial,
-            generator_lock,
-        )
+        try:
+            status, record = _process_slot(
+                slot,
+                cfg,
+                generators,
+                judges,
+                entry["start_refill_round"],
+                entry["stage_callback"],
+                memory_validator,
+                initial,
+                generator_lock,
+            )
+        except Exception as exc:
+            status = "failed"
+            record = {
+                "slot_id": entry["slot"]["slot_id"],
+                "stage": "exception",
+                "problems": [f"{type(exc).__name__}: {exc}"],
+            }
         results.append((entry["slot"], entry["owner"], status, record))
     return results
 

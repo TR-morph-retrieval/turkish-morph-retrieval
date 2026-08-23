@@ -43,7 +43,8 @@ edit script ve kimlikler Python tarafından eklenir.
 Semantic judge hedef özelliği görmeden açık ikinci-gold, katılımcı rolleri, tutarlılık ve doğallık
 hatalarını kontrol eder. Morphology judge hedef özellik, bozuk çekim, allomorf, hâl/çatı rolleri,
 IG/türetim sınırları ve çok-tokenlı morfolojik kapsamı kontrol eder. Yalnız güveni en az
-85 olan semantic veya morphology somut aday hatası aynı slotu onartır. Somut uyarıyla birleşen
+85 olan semantic veya morphology somut aday hatası aynı slotun iki metin alanını onartır; Python
+diğer family alanlarını değiştirmeden korur. Somut uyarıyla birleşen
 85-altı güven, `abstain`/`unclear` veya uyarı olmasa bile 60-altı güven human-review önceliğidir.
 Temiz 60–84 kararı yalnız QC notudur. Human review üretim
 sırasında değil, 600 kabul edilmiş family tamamlandıktan

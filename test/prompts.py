@@ -9,7 +9,7 @@ import hashlib
 import json
 import random
 
-PROMPT_VERSION = "test-prompts-3.9.3-batch3"
+PROMPT_VERSION = "test-prompts-3.9.4-local-candidate-repair"
 
 GENERATOR_SYSTEM = """\
 Sen Türkçe biçimbilim ve bilgi erişimi için contrast-set yazan uzman bir veri küratörüsün.
@@ -316,18 +316,11 @@ Family'ler arasında metin, olay veya aday kopyalama. Sonuçları görev sıras�
 
 
 def build_repair_prompt(
-    slot: dict, previous: dict, problems: list[str], repair_slots: list[str] | None = None
+    slot: dict, previous: dict, problems: list[str]
 ) -> str:
-    repair_slots = repair_slots or []
-    strategy = (
-        "Yalnız şu candidate_slot değerlerini düzelt: " + ", ".join(repair_slots) + ". "
-        "Query, context, semantic_profile ve diğer candidate'ları değiştirme."
-        if repair_slots else
-        "Sorun family geneline yayıldığı için gerekli alanları birlikte düzelt; sağlam alanları koru."
-    )
     return f"""\
 Önceki üretim otomatik kalite kapısından geçmedi. Önceki JSON üzerinde kontrollü onarım yap.
-{strategy}
+Sorun family geneline yayıldığı için gerekli alanları birlikte düzelt; sağlam alanları koru.
 Şemanın istediği tam JSON'u yeniden döndür; temel SLOT ve bütün üretim kuralları geçerlidir.
 
 SORUNLAR
@@ -337,6 +330,35 @@ SORUNLAR
 {json.dumps(previous, ensure_ascii=False, separators=(",", ":"))}
 
 ORİJİNAL GÖREV
+{build_generation_prompt(slot)}
+"""
+
+
+def build_local_candidate_repair_prompt(
+    slot: dict, previous: dict, problems: list[str], repair_slots: list[str]
+) -> str:
+    if not repair_slots:
+        raise ValueError("local candidate repair boş slot listesiyle çalışmaz")
+    previous_candidates = {
+        row.get("candidate_slot"): row
+        for row in previous.get("candidates", [])
+        if row.get("candidate_slot") in repair_slots
+    }
+    return f"""\
+Önceki benchmark family'sinde yalnız aşağıdaki candidate slotları hatalıdır:
+{', '.join(repair_slots)}
+
+Yalnız bu slotların `candidate_slot`, `critical_sentence` ve `critical_word` alanlarını döndür.
+Query, context, semantic_profile, gold ve listelenmeyen adayları yeniden yazma. Python dönen küçük
+yamayı eski family'ye uygulayacak ve değişmeyen bütün alanları byte-level koruyacaktır.
+
+SORUNLAR
+{json.dumps(problems, ensure_ascii=False, indent=2)}
+
+DÜZELTİLECEK ESKİ ADAYLAR
+{json.dumps(previous_candidates, ensure_ascii=False, separators=(",", ":"))}
+
+FAMILY BAĞLAMI VE KURALLAR
 {build_generation_prompt(slot)}
 """
 
