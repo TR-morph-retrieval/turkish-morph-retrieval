@@ -9,7 +9,7 @@ import hashlib
 import json
 import random
 
-PROMPT_VERSION = "test-prompts-3.9.0-oflazer-structure"
+PROMPT_VERSION = "test-prompts-3.9.3-batch3"
 
 GENERATOR_SYSTEM = """\
 Sen Türkçe biçimbilim ve bilgi erişimi için contrast-set yazan uzman bir veri küratörüsün.
@@ -232,6 +232,9 @@ HEDEF
   değiştirilmiş kopyası OLMAMALI. Yalnız `yolculuklarda → seyahatlerinde` gibi bir eşanlamlı
   değişimi yeterli değildir. En az iki anlam-koruyan ifade değişikliğiyle birlikte doğal bir
   sözdizimsel yeniden kurulum (öge sırası, yan cümle, çatı veya anlatım yapısı) kullan.
+- Query ile positive aynı doğruluk koşullarında iki yönlü eşdeğer olmalı; yalnız tek yönlü çıkarım
+  yeterli değildir. Üst/alt kavramla kapsamı daraltma veya genişletme (`yönetici → müdür` gibi),
+  rolü, türü, miktarı ya da kesinliği özelleştirme positive için yasaktır.
 - Strict moddaki kontrollü minimal çift query–gold değil, positive–hard_01 arasındadır. Diğer
   modlarda hard_01 hedef morfolojik karşıtlığı korur fakat farklı sözdizimi kullanabilir.
 - {mode_rule}
@@ -295,6 +298,23 @@ ALANLAR
 """
 
 
+def build_generation_batch_prompt(slots: list[dict]) -> str:
+    """Wrap independent slot prompts in one structured-output request."""
+    if not slots:
+        raise ValueError("boş generation batch üretilemez")
+    tasks = [
+        f"\n===== FAMILY {number}/{len(slots)} =====\n{build_generation_prompt(slot)}"
+        for number, slot in enumerate(slots, start=1)
+    ]
+    return f"""\
+Aşağıdaki {len(slots)} bağımsız benchmark family görevini tamamla. Her görev kendi
+SLOT kimliğini, semantic_frame_id değerini ve kalite kurallarını aynen korumalıdır.
+Family'ler arasında metin, olay veya aday kopyalama. Sonuçları görev sırasıyla yalnız
+`families` dizisinde döndür; açıklama yazma.
+{''.join(tasks)}
+"""
+
+
 def build_repair_prompt(
     slot: dict, previous: dict, problems: list[str], repair_slots: list[str] | None = None
 ) -> str:
@@ -346,14 +366,20 @@ KURALLAR
    koşullarıyla karşılayan ID'ler. Uyumlu, konuya yakın veya kısmi kanıt olanı ekleme.
 2. `unnatural_candidate_ids`: açıkça doğal olmayan Türkçe kullanan ID'ler.
    `internally_inconsistent_candidate_ids`: kendi içinde açıkça çelişen ID'ler.
+   `family_naturalness` ölçeği: 5=tamamen doğal, 4=doğal/küçük üslup pürüzü,
+   3=belirgin ama tolere edilebilir yapaylık, 2=ciddi yapaylık, 1=bozuk/doğal olmayan family.
+   Bu puan notun ve `unnatural_candidate_ids` listenle tutarlı olmalı.
 3. Zaman, görünüş, alışkanlık, kişi, sayı, olumsuzluk, kapsam ve katılımcı rolleri doğruluk
    koşulunun parçasıdır. Örneğin tek seferlik "dün yapmadı", "genellikle yapmaz" önermesini;
    "yapmış olabilir" de "yaptı" önermesini karşılamaz.
-4. Aday kendi içinde çelişiyorsa (ör. rapor hem hazır hem henüz bitmemişse)
+4. Query ile aday arasında yalnız tek yönlü çıkarım yetmez. Aday bir rolü, varlık türünü, miktarı
+   veya kesinliği daraltıyor/genişletiyorsa tam relevant değildir; örneğin `yönetici` ile `müdür`
+   bağlama dayalı açık eşdeğerlik olmadan aynı kabul edilmez.
+5. Aday kendi içinde çelişiyorsa (ör. rapor hem hazır hem henüz bitmemişse)
    internally_consistent=false ver. Dilbilgisel ama mantıksal çelişkili aday kabul edilmez.
-5. Uzunluk, üslup veya ayrıntı tek bir cevabı yapay biçimde ele veriyorsa
+6. Uzunluk, üslup veya ayrıntı tek bir cevabı yapay biçimde ele veriyorsa
    length_or_style_artifact=true ver.
-6. Emin değilsen abstain=true ver. Confidence, kararın doğruluğuna ilişkin 0–100 puandır.
+7. Emin değilsen abstain=true ver. Confidence, kararın doğruluğuna ilişkin 0–100 puandır.
 Kısa ID listeleri ve kısa not dışında aday-bazlı açıklama üretme.
 """
 

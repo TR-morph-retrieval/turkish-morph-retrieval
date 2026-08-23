@@ -12,7 +12,6 @@ from .evaluation import load_items
 from .exports import finalize
 from .judge_report import judge_calibration_report
 from .pipeline import default_run_id, generate, paths_for, read_jsonl, write_plan
-from .preview import generate_codex_preview
 from .review import apply_human_reviews, export_human_review
 from .selftest import run as run_selftest
 from .validators import artifact_report, train_test_leakage_problems
@@ -31,7 +30,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     plan = sub.add_parser("plan", help="API çağrısı yapmadan kapsam planı üret")
-    plan.add_argument("--run-id", default="planned_test_v38")
+    plan.add_argument("--run-id", default="planned_test_v39")
     plan.add_argument("--size", type=int, default=None)
 
     generation = sub.add_parser("generate", help="üret + QC + iki-aşamalı judge; kalmayan slotları refill et")
@@ -44,18 +43,6 @@ def main() -> int:
         default=None,
         help="yalnız --limit pilotunda bütün seçili slotları tek generator ile üret",
     )
-
-    preview = sub.add_parser(
-        "preview-codex", help="API key olmadan yerel Codex oturumuyla preview üret"
-    )
-    preview.add_argument("--run-id", required=True)
-    preview.add_argument("--count", type=int, default=60)
-    preview.add_argument("--batch-size", type=int, default=5)
-    preview.add_argument("--model", default="gpt-5.6-sol")
-    preview.add_argument("--reasoning-effort", default="medium")
-    preview.add_argument("--workers", type=int, default=1)
-    preview.add_argument("--reserve-slots", type=int, default=0)
-    preview.add_argument("--cache-only", action="store_true")
 
     freeze = sub.add_parser(
         "finalize",
@@ -116,12 +103,6 @@ def main() -> int:
             run_id, args.config, args.limit, args.workers, args.generator_id, args.offset
         )
         result["run_id"] = run_id
-    elif args.command == "preview-codex":
-        result = generate_codex_preview(
-            args.run_id, args.count, args.batch_size, args.model,
-            args.reasoning_effort, args.config, args.workers, args.reserve_slots,
-            args.cache_only,
-        )
     elif args.command == "finalize":
         result = finalize(args.run_id, args.config)
     elif args.command == "audit":

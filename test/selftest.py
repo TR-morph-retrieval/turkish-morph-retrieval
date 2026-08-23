@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -16,6 +17,7 @@ from .config import ConfigError, load_config, model_family, validate_config
 from .dataset_memory import DatasetMemory, semantic_profile_problems
 from .prompts import (
     _blind_candidates,
+    build_generation_batch_prompt,
     build_generation_prompt,
     build_morphology_judge_prompt,
     build_repair_prompt,
@@ -25,7 +27,13 @@ from .evaluation import evaluate_run, validate_binary_qrels
 from .morphology import _expected_feature_check
 from .judge_report import judge_calibration_report
 from .planner import build_plan, make_slot, plan_statistics
-from .pipeline import _process_slot, _resume_refill_rounds
+from .pipeline import (
+    _group_slots_by_generator,
+    _process_generation_batch,
+    _process_slot,
+    _resume_refill_rounds,
+)
+from .schema import generation_batch_schema
 from .providers import ClaudeCliProvider
 from .review import apply_human_reviews, export_human_review
 from .selection import select_balanced
@@ -487,6 +495,13 @@ def run() -> list[str]:
     )
     if not any("doğal olmayan aday" in problem for problem in naturalness_problems):
         failures.append("candidate-level naturalness kapısı çalışmadı")
+    low_family_naturalness = deepcopy(semantic_judge)
+    low_family_naturalness["family_naturalness"] = 2
+    family_naturalness_problems, _ = interpret_semantic_judges(
+        family, [low_family_naturalness], cfg
+    )
+    if not any("family naturalness" in problem for problem in family_naturalness_problems):
+        failures.append("family-level naturalness kapısı çalışmadı")
     uncertain_semantic = deepcopy(bad_support)
     uncertain_semantic["confidence"] = 60
     uncertain_problems, _ = interpret_semantic_judges(family, [uncertain_semantic], cfg)
@@ -646,6 +661,7 @@ def run() -> list[str]:
     failures.extend(_check_model_family_gates())
     failures.extend(_check_claude_cli_adapter())
     failures.extend(_check_refill_round_nonce(cfg))
+    failures.extend(_check_generation_batching(cfg))
     failures.extend(_check_human_review_roundtrip(cfg, slot, family))
     return failures
 
@@ -718,6 +734,68 @@ def _check_refill_round_nonce(cfg) -> list[str]:
     repairs = [build_repair_prompt({**slot, "refill_round": r}, {}, ["x"]) for r in range(3)]
     if len(set(repairs)) != 3:
         failures.append("repair prompt'u refill turları arasında ayrışmıyor")
+    return failures
+
+
+def _check_generation_batching(cfg) -> list[str]:
+    failures = []
+    slots = build_plan(cfg)
+    groups = _group_slots_by_generator(slots, 3)
+    if any(not 1 <= len(group) <= 3 for group in groups):
+        failures.append("generation batch boyutu 1–3 sınırını aşıyor")
+    if any(len({slot["generator_id"] for slot in group}) != 1 for group in groups):
+        failures.append("aynı batch içinde iki generator karıştı")
+    grouped_ids = sorted(slot["slot_id"] for group in groups for slot in group)
+    if grouped_ids != sorted(slot["slot_id"] for slot in slots):
+        failures.append("generation batching slot kaybetti veya çoğalttı")
+    if len(groups) != 200:
+        failures.append(f"600 family batch=3 ile 200 çağrı olmalı; bulundu: {len(groups)}")
+    schema = generation_batch_schema(3)["schema"]["properties"]["families"]
+    if schema.get("minItems") != 3 or schema.get("maxItems") != 3:
+        failures.append("batch structured-output şeması tam üç family zorlamıyor")
+    prompt = build_generation_batch_prompt(slots[:3])
+    if "`families`" not in prompt or any(slot["semantic_frame_id"] not in prompt for slot in slots[:3]):
+        failures.append("batch prompt family sırasını/frame kimliklerini taşımıyor")
+
+    batch = groups[0]
+    calls = []
+
+    class FakeGenerator:
+        def call_json(self, system, prompt, schema, task):
+            calls.append((prompt, schema, task))
+            return SimpleNamespace(
+                data={"families": [
+                    {"semantic_frame_id": slot["semantic_frame_id"]} for slot in batch
+                ]},
+                provider="fixture", model="fixture", request_hash="fixture",
+                cache_hit=False, usage={}, actual_model="fixture", route_provider="fixture",
+            )
+
+    entries = [{
+        "slot": slot,
+        "prompt_slot": slot,
+        "owner": f"owner-{index}",
+        "stage_callback": None,
+        "start_refill_round": 0,
+    } for index, slot in enumerate(batch)]
+
+    def fake_process_slot(*args):
+        initial_generation = args[7]
+        if initial_generation is None:
+            raise AssertionError("batch family _process_slot'a taşınmadı")
+        return "accepted", {"slot_id": args[0]["slot_id"]}
+
+    with patch("test.pipeline._process_slot", side_effect=fake_process_slot):
+        outcomes = _process_generation_batch(
+            entries,
+            cfg,
+            {batch[0]["generator_id"]: FakeGenerator()},
+            {},
+            None,
+            threading.Lock(),
+        )
+    if len(calls) != 1 or len(outcomes) != len(batch):
+        failures.append("üçlü batch tek provider çağrısından üç family üretmedi")
     return failures
 
 

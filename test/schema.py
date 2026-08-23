@@ -49,6 +49,29 @@ GENERATION_SCHEMA = {
 }
 
 
+def generation_batch_schema(size: int) -> dict:
+    """Structured-output contract for one provider call containing independent families."""
+    if size < 1:
+        raise ValueError("generation batch size en az 1 olmalı")
+    return {
+        "name": "turkish_morph_contrast_family_batch",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "families": {
+                    "type": "array",
+                    "minItems": size,
+                    "maxItems": size,
+                    "items": GENERATION_SCHEMA["schema"],
+                }
+            },
+            "required": ["families"],
+        },
+    }
+
+
 SEMANTIC_JUDGE_SCHEMA = {
     "name": "blind_semantic_retrieval_judgment",
     "strict": True,

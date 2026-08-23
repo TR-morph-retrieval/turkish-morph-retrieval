@@ -206,6 +206,8 @@ def validate_config(cfg: dict[str, Any], runtime: bool = False) -> None:
         raise ConfigError("max_generation_attempts en az 1 olmalı")
     if int(generation.get("refill_rounds_per_call", 0)) < 1:
         raise ConfigError("refill_rounds_per_call en az 1 olmalı")
+    if not 1 <= int(generation.get("batch_size", 0)) <= 5:
+        raise ConfigError("batch_size 1–5 arasında olmalı")
 
 
 def load_config(path: str | Path | None = None, runtime: bool = False) -> dict[str, Any]:

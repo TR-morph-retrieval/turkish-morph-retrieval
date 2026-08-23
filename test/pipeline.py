@@ -25,13 +25,20 @@ from .prompts import (
     PROMPT_VERSION,
     SEMANTIC_JUDGE_SYSTEM,
     build_adjudicator_prompt,
+    build_generation_batch_prompt,
     build_generation_prompt,
     build_morphology_judge_prompt,
     build_repair_prompt,
     build_semantic_judge_prompt,
 )
 from .providers import make_provider
-from .schema import ADJUDICATOR_SCHEMA, GENERATION_SCHEMA, MORPHOLOGY_JUDGE_SCHEMA, SEMANTIC_JUDGE_SCHEMA
+from .schema import (
+    ADJUDICATOR_SCHEMA,
+    GENERATION_SCHEMA,
+    MORPHOLOGY_JUDGE_SCHEMA,
+    SEMANTIC_JUDGE_SCHEMA,
+    generation_batch_schema,
+)
 from .validators import (
     interpret_morphology_judge,
     interpret_semantic_judges,
@@ -148,6 +155,7 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         "plan_sha256": current_hash,
         "plan_size": len(slots),
         "plan_statistics": plan_statistics(slots),
+        "generation_batch_size": int(cfg["generation"]["batch_size"]),
         "generators": [
             {
                 "id": spec["id"], "provider": spec["provider"], "model": spec["model"],
@@ -171,7 +179,7 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         previous = json.loads(paths.manifest.read_text(encoding="utf-8"))
         invariant_keys = (
             "dataset_version", "prompt_version", "pipeline_source_sha256", "config_sha256",
-            "plan_sha256", "generators", "judges", "human_review"
+            "plan_sha256", "generation_batch_size", "generators", "judges", "human_review"
         )
         changed = [key for key in invariant_keys if previous.get(key) != manifest.get(key)]
         if changed:
@@ -199,7 +207,7 @@ def _request_provenance(response) -> dict[str, Any]:
 
 def _process_slot(
     slot, cfg, generators, judges, start_refill_round: int = 0, stage_callback=None,
-    memory_validator=None,
+    memory_validator=None, initial_generation=None, generator_lock=None,
 ) -> tuple[str, dict[str, Any]]:
     generator = generators[slot["generator_id"]]
     max_attempts = int(cfg["generation"]["max_generation_attempts"])
@@ -238,6 +246,30 @@ def _process_slot(
         validation_problems: list[str] = []
         family = None
         for attempt in range(max_attempts):
+            if attempt == 0 and not refill_history and initial_generation is not None:
+                previous, provenance = initial_generation
+                generation_provenance.append(provenance)
+                initial_generation = None
+                if stage_callback:
+                    stage_callback(
+                        "generated",
+                        {"refill_round": refill_round, "attempt": attempt, "batched": True},
+                    )
+                try:
+                    family = normalize_family(previous, slot)
+                    validation_problems = validate_family(family, slot, cfg)
+                except Exception as exc:
+                    validation_problems = [
+                        f"normalizasyon hatası: {type(exc).__name__}: {exc}"
+                    ]
+                    family = None
+                if not validation_problems:
+                    if stage_callback:
+                        stage_callback(
+                            "deterministic_validated", {"refill_round": refill_round}
+                        )
+                    break
+                continue
             if attempt == 0 and not refill_history:
                 prompt = build_generation_prompt(prompt_slot)
             else:
@@ -249,9 +281,15 @@ def _process_slot(
                     feedback,
                     repair_slots_for(feedback, normalized_feedback),
                 )
-            response = generator.call_json(
-                GENERATOR_SYSTEM, prompt, GENERATION_SCHEMA, "generate_test_family"
-            )
+            if generator_lock:
+                with generator_lock:
+                    response = generator.call_json(
+                        GENERATOR_SYSTEM, prompt, GENERATION_SCHEMA, "generate_test_family"
+                    )
+            else:
+                response = generator.call_json(
+                    GENERATOR_SYSTEM, prompt, GENERATION_SCHEMA, "generate_test_family"
+                )
             if stage_callback:
                 stage_callback("generated", {"refill_round": refill_round, "attempt": attempt})
             generation_provenance.append(_request_provenance(response))
@@ -448,6 +486,69 @@ def _process_slot(
     }
 
 
+def _group_slots_by_generator(slots: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
+    """Create homogeneous batches while alternating the two generators."""
+    queues: dict[str, list[dict[str, Any]]] = {}
+    for slot in slots:
+        queues.setdefault(slot["generator_id"], []).append(slot)
+    groups: list[list[dict[str, Any]]] = []
+    while any(queues.values()):
+        for generator_id in queues:
+            if queues[generator_id]:
+                groups.append(queues[generator_id][:batch_size])
+                del queues[generator_id][:batch_size]
+    return groups
+
+
+def _process_generation_batch(entries, cfg, generators, judges, memory_validator, generator_lock):
+    """Generate three families together, then validate/judge/refill each independently."""
+    prompt_slots = [entry["prompt_slot"] for entry in entries]
+    generator_id = prompt_slots[0]["generator_id"]
+    generator = generators[generator_id]
+    with generator_lock:
+        response = generator.call_json(
+            GENERATOR_SYSTEM,
+            build_generation_batch_prompt(prompt_slots),
+            generation_batch_schema(len(prompt_slots)),
+            f"generate_test_batch_{prompt_slots[0]['slot_id']}",
+        )
+    raw_families = response.data.get("families", [])
+    by_frame = {
+        row.get("semantic_frame_id"): row
+        for row in raw_families
+        if isinstance(row, dict) and row.get("semantic_frame_id")
+    }
+    shared_provenance = _request_provenance(response)
+    results = []
+    for index, entry in enumerate(entries):
+        slot = entry["prompt_slot"]
+        raw = by_frame.get(slot["semantic_frame_id"])
+        initial = None
+        if raw is not None:
+            initial = (
+                raw,
+                {
+                    **shared_provenance,
+                    "shared_batch_request": True,
+                    "batch_size": len(entries),
+                    "batch_member_index": index,
+                },
+            )
+        status, record = _process_slot(
+            slot,
+            cfg,
+            generators,
+            judges,
+            entry["start_refill_round"],
+            entry["stage_callback"],
+            memory_validator,
+            initial,
+            generator_lock,
+        )
+        results.append((entry["slot"], entry["owner"], status, record))
+    return results
+
+
 def _resume_refill_rounds(rejected: list[dict[str, Any]]) -> dict[str, int]:
     rounds: dict[str, int] = {}
     for row in rejected:
@@ -505,9 +606,6 @@ def generate(
     rejected_before = read_jsonl(paths.rejected)
     completed = {row.get("slot_id") for row in accepted_before if row.get("slot_id")}
     refill_rounds = _resume_refill_rounds(rejected_before)
-    for item in accepted_before:
-        if item.get("slot_id"):
-            memory.record_outcome(item["slot_id"], "accepted", item, actor="jsonl_reconcile")
     pending = [
         slot
         for slot in slots
@@ -547,62 +645,85 @@ def generate(
     started = time.time()
 
     worker_count = int(workers or cfg["generation"].get("workers", 4))
+    batch_size = int(cfg["generation"]["batch_size"])
     submitted = 0
+    generation_batches = 0
     reservation_skips = 0
-    pending_iter = iter(pending)
+    pending_batches = iter(_group_slots_by_generator(pending, batch_size))
+    generator_locks = {generator_id: threading.Lock() for generator_id in generators}
     with ThreadPoolExecutor(max_workers=max(1, worker_count)) as executor:
-        future_to_slot: dict[Any, tuple[dict[str, Any], str]] = {}
+        future_to_entries: dict[Any, list[dict[str, Any]]] = {}
 
         def fill_workers() -> None:
-            nonlocal submitted, reservation_skips
-            while len(future_to_slot) < max(1, worker_count):
+            nonlocal submitted, generation_batches, reservation_skips
+            while len(future_to_entries) < max(1, worker_count):
                 try:
-                    slot = next(pending_iter)
+                    slot_batch = next(pending_batches)
                 except StopIteration:
                     return
-                owner = f"{run_id}:{os.getpid()}:{slot['slot_id']}"
-                if not memory.reserve_slot(slot["slot_id"], owner):
-                    reservation_skips += 1
+                entries = []
+                for slot in slot_batch:
+                    owner = f"{run_id}:{os.getpid()}:{slot['slot_id']}"
+                    if not memory.reserve_slot(slot["slot_id"], owner):
+                        reservation_skips += 1
+                        continue
+                    prompt_slot = {
+                        **slot,
+                        "dataset_memory": memory.generation_context(slot),
+                    }
+
+                    def stage_callback(stage, payload, *, _slot=slot, _owner=owner):
+                        memory.record_stage(_slot["slot_id"], stage, _owner, payload)
+
+                    entries.append({
+                        "slot": slot,
+                        "prompt_slot": prompt_slot,
+                        "owner": owner,
+                        "stage_callback": stage_callback,
+                        "start_refill_round": refill_rounds.get(slot["slot_id"], 0),
+                    })
+                if not entries:
                     continue
-                prompt_slot = {
-                    **slot,
-                    "dataset_memory": memory.generation_context(slot),
-                }
-
-                def stage_callback(stage, payload, *, _slot=slot, _owner=owner):
-                    memory.record_stage(_slot["slot_id"], stage, _owner, payload)
-
+                generator_id = entries[0]["slot"]["generator_id"]
                 future = executor.submit(
-                    _process_slot, prompt_slot, cfg, generators, judges,
-                    refill_rounds.get(slot["slot_id"], 0), stage_callback,
+                    _process_generation_batch,
+                    entries,
+                    cfg,
+                    generators,
+                    judges,
                     memory.conflicts_for,
+                    generator_locks[generator_id],
                 )
-                future_to_slot[future] = (slot, owner)
-                submitted += 1
+                future_to_entries[future] = entries
+                submitted += len(entries)
+                generation_batches += 1
 
         fill_workers()
-        while future_to_slot:
-            done, _ = wait(set(future_to_slot), return_when=FIRST_COMPLETED)
+        while future_to_entries:
+            done, _ = wait(set(future_to_entries), return_when=FIRST_COMPLETED)
             for future in done:
-                slot, owner = future_to_slot.pop(future)
+                entries = future_to_entries.pop(future)
                 try:
-                    status, record = future.result()
+                    outcomes = future.result()
                 except Exception as exc:  # transient/provider failures are retryable on the next resume
-                    status = "failed"
-                    record = {
-                        "slot_id": slot["slot_id"],
-                        "stage": "exception",
-                        "problems": [f"{type(exc).__name__}: {exc}"],
-                    }
-                    errors.append(record)
-                target_path = {
-                    "accepted": paths.accepted,
-                    "rejected": paths.rejected,
-                    "failed": paths.failures,
-                }[status]
-                _append_jsonl(target_path, record, write_lock)
-                memory.record_outcome(slot["slot_id"], status, record, actor=owner)
-                counts[status] += 1
+                    outcomes = []
+                    for entry in entries:
+                        record = {
+                            "slot_id": entry["slot"]["slot_id"],
+                            "stage": "exception",
+                            "problems": [f"{type(exc).__name__}: {exc}"],
+                        }
+                        errors.append(record)
+                        outcomes.append((entry["slot"], entry["owner"], "failed", record))
+                for slot, owner, status, record in outcomes:
+                    target_path = {
+                        "accepted": paths.accepted,
+                        "rejected": paths.rejected,
+                        "failed": paths.failures,
+                    }[status]
+                    _append_jsonl(target_path, record, write_lock)
+                    memory.record_outcome(slot["slot_id"], status, record, actor=owner)
+                    counts[status] += 1
             fill_workers()
 
     accepted = read_jsonl(paths.accepted)
@@ -615,6 +736,8 @@ def generate(
         "run_id": run_id,
         "elapsed_seconds_this_call": round(time.time() - started, 2),
         "pending_processed_this_call": submitted,
+        "generation_batch_size": batch_size,
+        "generation_batches_submitted_this_call": generation_batches,
         "reservation_skips_this_call": reservation_skips,
         "outcomes_this_call": dict(counts),
         "accepted_total": len(accepted),

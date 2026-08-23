@@ -7,9 +7,8 @@ araştırma projesi. Repo artık veri yaşam döngüsünü iki bağımsız parç
 |---|---|
 | [`train/`](train/) | Eski Gemini train/dev generator'ı, model-selection araçları ve v2.0–v2.2 JSON geçmişi. Bu bölüm korunmuş legacy sistemdir. |
 | [`test/`](test/) | 100 development + 500 final test; iki generator, bağımsız LLM judge, otomatik QC/qrels/freeze. |
-| [`test/data/paid_pilot_verisi_20.json`](test/data/paid_pilot_verisi_20.json) | Sol + DeepSeek + GLM hattından kabul edilen, pilot editoryal kontrolü yapılmış 20-family ücretli smoke pilotu; nihai insan-reviewed veri değildir. |
-| [`test/data/deneme_verisi_60.json`](test/data/deneme_verisi_60.json) | Eski 40-family preview ile güncel 20-family pilotun provenance koruyan birleşik deneme seti. |
-| [`test/notebooks/morph_baseline_eval_deneme60_colab.ipynb`](test/notebooks/morph_baseline_eval_deneme60_colab.ipynb) | Birleşik 60-family deneme verisi: Recall@1/3, 11/660 aday gold sırası ve temel metrikler. |
+| [`test/data/pilot_verisi_5.json`](test/data/pilot_verisi_5.json) | Güncel üretim ve judge hattından çıkan beş-family smoke verisi; paper sonucu değildir. |
+| [`test/notebooks/morph_baseline_eval_pilot5_colab.ipynb`](test/notebooks/morph_baseline_eval_pilot5_colab.ipynb) | Güncel beş-family smoke verisini hızlıca değerlendiren küçük notebook. |
 | [`test/notebooks/morph_baseline_eval_600_colab.ipynb`](test/notebooks/morph_baseline_eval_600_colab.ipynb) | 100 development + 500 final için eksiksiz paper değerlendirmesi. |
 
 Eski 50-family JSON ve önceki veri sürümü
@@ -43,21 +42,23 @@ Yeni test kodu planlama/QC tarafında yalnız Python standart kütüphanesini ku
 
 ```bash
 python3 -m test self-test
-python3 -m test plan --run-id test_v35
+python3 -m test plan --run-id test_v39_final
 ```
 
 API üretimi için:
 
 ```bash
 export OPENROUTER_API_KEY="..."
-export TEST_GENERATOR_MODEL_A="provider-a/model-a"
-export TEST_GENERATOR_MODEL_B="provider-b/model-b"
-export TEST_JUDGE_MODEL="provider-c/model-c"
-python3 -m test generate --run-id test_v35_pilot --limit 30
+export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
+export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
+export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
+export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
+python3 -m test generate --run-id test_v39_final
 ```
 
-İki generator ve judge üç farklı OpenRouter model ailesinden değilse kod çalışmayı reddeder. Model kimlikleri,
-prompt/config sürümü, request hash'leri, token kullanımı ve git commit'i run manifestinde tutulur.
+Generator'lar Codex ve Claude abonelik CLI'larını, bağımsız judge'lar OpenRouter API'sini kullanır.
+Model kimlikleri, prompt/config sürümü, request hash'leri, token kullanımı ve git commit'i run
+manifestinde tutulur.
 
 Legacy train sistemi için önce `cd train`, ardından [`train/README.md`](train/README.md) içindeki
 komutları kullanın.

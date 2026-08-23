@@ -90,6 +90,7 @@
   "generation": {
     "max_generation_attempts": 2,
     "refill_rounds_per_call": 3,
+    "batch_size": 3,
     "workers": 4,
     "generators": [
       {

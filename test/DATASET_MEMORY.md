@@ -28,15 +28,15 @@ SQLite `WAL` ve `BEGIN IMMEDIATE` rezervasyonu aynı slotun iki workera verilmes
 Plan oluşturulduğunda registry de hazırlanır:
 
 ```bash
-python3 -m test plan --run-id test_v37
-python3 -m test memory-report --run-id test_v37
+python3 -m test plan --run-id test_v39_final
+python3 -m test memory-report --run-id test_v39_final
 ```
 
 Train/dev metadata'sını test üretiminden önce hafızaya eklemek için:
 
 ```bash
 python3 -m test memory-ingest \
-  --run-id test_v37 \
+  --run-id test_v39_final \
   --input train/data_morph_v2/morph_train_v2.2.json \
   --source train_v2_2 \
   --split train

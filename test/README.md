@@ -368,11 +368,11 @@ tablodur; ana rapor macro/layer/objective ve morph-hard/semantic-hard düzeyinde
 ```bash
 # API'siz regresyon testi ve plan
 python3 -m test self-test
-python3 -m test plan --run-id test_v38
-python3 -m test memory-report --run-id test_v38
+python3 -m test plan --run-id test_v39_final
+python3 -m test memory-report --run-id test_v39_final
 
 # Mevcut train metadata'sını tekrar önleme hafızasına ekle
-python3 -m test memory-ingest --run-id test_v38 --input TRAIN.json \
+python3 -m test memory-ingest --run-id test_v39_final --input TRAIN.json \
   --source train_current --split train
 
 # 300 Codex CLI + 300 Claude Code CLI; judge'lar OpenRouter
@@ -383,21 +383,21 @@ export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
 export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
 
 # 1-slot ücretli smoke test; varsayılan judge'lar DeepSeek V4 Flash + GLM 5.2'dir.
-python3 -m test generate --run-id smoke_v38 --limit 1 --workers 1
+python3 -m test generate --run-id smoke_v39 --limit 1 --workers 1
 
 # İstenirse modeller environment ile override edilebilir.
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
 export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
-python3 -m test generate --run-id test_v38
+python3 -m test generate --run-id test_v39_final
 
 # 600 accepted family tamamlanınca freeze öncesi kör insan review
-python3 -m test review-export --run-id test_v38
-python3 -m test review-apply --run-id test_v38 --input decisions.jsonl
-python3 -m test judge-report --run-id test_v38
-python3 -m test generate --run-id test_v38  # yalnız insanın reddettiği slotları refill eder
+python3 -m test review-export --run-id test_v39_final
+python3 -m test review-apply --run-id test_v39_final --input decisions.jsonl
+python3 -m test judge-report --run-id test_v39_final
+python3 -m test generate --run-id test_v39_final  # yalnız insanın reddettiği slotları refill eder
 
 # Tamamlanan 100/500 kotasını doğrula, freeze et ve qrels export et
-python3 -m test finalize --run-id test_v38
+python3 -m test finalize --run-id test_v39_final
 
 # Train üretildikten sonra leakage audit
 python3 -m test audit-leakage --test TEST.json --train TRAIN.json
@@ -405,32 +405,15 @@ python3 -m test audit-leakage --test TEST.json --train TRAIN.json
 # Opsiyonel lemma/UFeats audit
 python3 -m test morph-audit --input TEST.json --output morph_audit.json --download-model
 
-# API key'siz yalnız preview
-python3 -m test preview-codex --run-id sol_preview_20_v36 --count 20 \
-  --batch-size 5 --workers 3 --reserve-slots 6 \
-  --model gpt-5.6-sol --reasoning-effort medium
 ```
 
-Codex preview deterministic QC ve otomatik qrels içerir fakat bağımsız LLM judge çalıştırmaz;
-paper verisine dondurulmaz. Bu yol API key/API faturası kullanmaz; yerel ChatGPT oturumunun Codex
-kullanım kotasından harcar. `workers` batch'leri paralelleştirir. `reserve-slots`, reddedilenlerin
-yerine geçebilecek ek slotları planlar ve çıktı yine `count` accepted family ile sınırlandırılır.
-Yalnız daha önce tamamlanmış cache'i yeni kullanım olmadan yeniden doğrulamak için `--cache-only`
-eklenebilir.
-
-Eski iki pilot set, sade dosya yapısı için `data/deneme_verisi_40.json` içinde birleştirilmiştir.
-İlk 20 family Codex CLI / `gpt-5.6-sol`, sonraki 20 family `gemini-2.5-flash` provenance'ı taşır.
-Bağımsız judge çalıştırılmamış bu veri yalnız notebook denemesidir; final benchmark değildir.
-
-`data/paid_pilot_verisi_20.json`, Sol generator + DeepSeek semantic judge + GLM morphology judge
-hattından kabul edilen ve pilot düzeyinde editoryal kontrolden geçirilen 20 family'yi tek dosyada
-tutar. Her family kendi model/request/prompt provenance'ını taşır. Pilot farklı judge iyileştirme
-aşamalarından geçtiği ve henüz planlanan nihai insan kontrolünü görmediği için paper testine
-otomatik eklenmez; sistem smoke testi ve nitel inceleme içindir.
-
-`data/deneme_verisi_60.json`, eski 40-family preview ile bu güncel 20-family pilotu birleştirir.
-Kaynak metadata'sı korunur; birleşik dosya yalnız hızlı encoder karşılaştırması içindir ve paper
-benchmark'ı olarak raporlanmaz.
+Eski ayrı preview üretim motoru final üretim öncesinde kaldırılmıştır. Pilot ve 600-family üretimi
+aynı nihai pipeline'ı kullanır. Generator çağrıları aynı modele ait üç bağımsız family'yi tek
+structured-output isteğinde üretir; deterministic QC, iki bağımsız judge, sorunlu slot onarımı ve
+SQLite kaydı family bazında kalır. Yeni veriler yalnız
+`runs/<run-id>/` altındaki plan, SQLite registry, accepted/rejected kayıtları ve provider
+provenance'ı üzerinden ilerler. Küçük smoke koşusundan çıkarılan `data/pilot_verisi_5.json` yalnız
+pipeline ve encoder kontrolü içindir; paper release final insan kontrolü ve freeze sonrasında çıkar.
 
 ## Ana dosyalar
 
@@ -449,10 +432,8 @@ benchmark'ı olarak raporlanmaz.
 | `exports.py` | Freeze, blind/internal JSON, BEIR ve qrels |
 | `morphology.py` | Opsiyonel Stanza audit'i |
 | `evaluation.py` | Metrikler, baseline, ablation ve istatistik |
-| `data/deneme_verisi_40.json` | Eski iki pilotun provenance koruyan tek deneme dosyası |
-| `data/paid_pilot_verisi_20.json` | Güncel cascade-judged ve editoryal kontrollü smoke pilotu |
-| `data/deneme_verisi_60.json` | Eski 40 + güncel 20 birleşik encoder deneme seti |
-| `notebooks/morph_baseline_eval_deneme60_colab.ipynb` | Tek dosyayla 60-family / 660-belge hızlı test |
+| `data/pilot_verisi_5.json` | Güncel v3.9 generator + iki-judge smoke çıktısı |
+| `notebooks/morph_baseline_eval_pilot5_colab.ipynb` | Beş-family / 55-belge hızlı test |
 | `notebooks/morph_baseline_eval_600_colab.ipynb` | 100 dev + 500 final paper değerlendirmesi |
 
 Freeze çıktıları:
@@ -464,12 +445,12 @@ test/runs/<run_id>/
 ├── rejected.jsonl
 ├── generation_report.json
 ├── release/
-│   ├── morph_dev_v3.6.0.json
-│   ├── morph_test_blind_v3.6.0.json
+│   ├── morph_dev_v3.9.0.json
+│   ├── morph_test_blind_v3.9.0.json
 │   ├── artifact_audit.json
 │   └── freeze_manifest.json
 └── private/
-    ├── morph_test_internal_v3.6.0.json
+    ├── morph_test_internal_v3.9.0.json
     ├── private_qrels.jsonl
     ├── beir_test_qrels.tsv
     └── train_exclusion_holdouts.json

@@ -51,17 +51,12 @@ sonra freeze öncesinde uygulanır; insanın reddettiği slotlar yeniden üretil
 Bu öncelik koşullarını taşıyan kabul edilmiş family'ler
 `human_review_priority=true` ile işaretlenir ve final-review manifestinde önce gösterilir.
 
-Pilot provenance: `v36` Codex CLI / `gpt-5.6-sol`; `v37` deneysel Google /
-`gemini-2.5-flash` üretimidir. İkisinde de independent judge çalışmadığından paper sonucu olarak
-raporlanmaz.
-
-`data/paid_pilot_verisi_20.json`, Sol + DeepSeek + GLM hattından kabul edilmiş ve pilot düzeyinde
-editoryal kontrolden geçirilmiş 20-family smoke pilotudur. Provenance içerir ancak henüz planlanan
-nihai insan değerlendirmesinden geçmiş benchmark verisi değildir.
-
-`data/deneme_verisi_60.json`, eski 40-family preview ile bu son 20-family pilotun birleşimidir.
-`notebooks/morph_baseline_eval_deneme60_colab.ipynb` bu 60 query × 11 adaylık deneme setini
-kontrollü ve 660-belge full-corpus retrieval biçiminde değerlendirir.
+Eski ayrı preview üretim kodu final üretim öncesinde kaldırılmıştır. Pilot ve ana üretim aynı
+nihai pipeline'ı kullanır; ilk üretim çağrıları üç family'lik batch, bütün QC/judge/refill ve SQLite
+kayıtları family bazındadır. Güncel beş-family smoke veri
+`data/pilot_verisi_5.json` dosyasına çıkarılır ve
+`notebooks/morph_baseline_eval_pilot5_colab.ipynb` ile hızlıca değerlendirilir; 600-family paper
+notebook'u bundan ayrıdır.
 
 Qrels family oluşturulurken hazırdır:
 
@@ -82,8 +77,8 @@ Komutlar:
 
 ```bash
 python3 -m test self-test
-python3 -m test plan --run-id test_v38
-python3 -m test memory-report --run-id test_v38
+python3 -m test plan --run-id test_v39_final
+python3 -m test memory-report --run-id test_v39_final
 
 export OPENROUTER_API_KEY="..."
 export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
@@ -91,12 +86,12 @@ export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
 # Opsiyonel override; varsayılanlar aşağıdaki ücretli ve ZDR uyumlu modellerdir.
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
 export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
-python3 -m test generate --run-id test_v38
-python3 -m test review-export --run-id test_v38  # 600 accepted family hazır olunca
-python3 -m test review-apply --run-id test_v38 --input decisions.jsonl
-python3 -m test judge-report --run-id test_v38
-python3 -m test generate --run-id test_v38  # yalnız insanın reddettiği slotları refill eder
-python3 -m test finalize --run-id test_v38
+python3 -m test generate --run-id test_v39_final
+python3 -m test review-export --run-id test_v39_final  # 600 accepted family hazır olunca
+python3 -m test review-apply --run-id test_v39_final --input decisions.jsonl
+python3 -m test judge-report --run-id test_v39_final
+python3 -m test generate --run-id test_v39_final  # yalnız insanın reddettiği slotları refill eder
+python3 -m test finalize --run-id test_v39_final
 ```
 
 Detaylar: [`README.md`](README.md). Final Colab:

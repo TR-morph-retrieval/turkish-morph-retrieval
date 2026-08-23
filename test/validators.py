@@ -577,6 +577,11 @@ def interpret_semantic_judges(
                 problems.append(f"{label} iç tutarsız aday buldu: {inconsistent}")
             if unnatural:
                 problems.append(f"{label} doğal olmayan aday buldu: {unnatural}")
+            naturalness_min = int(cfg["quality"]["judge_naturalness_min"])
+            if not isinstance(family_naturalness, int) or family_naturalness < naturalness_min:
+                problems.append(
+                    f"{label} family naturalness {family_naturalness}/{naturalness_min}"
+                )
             if verdict.get("length_or_style_artifact"):
                 problems.append(f"{label} uzunluk/üslup artefaktı buldu")
 

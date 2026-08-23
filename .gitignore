@@ -22,5 +22,5 @@ train/data_morph_v2/*copy*
 # New test generation/review state. It contains blinded reviewer work and private sealed qrels.
 test/runs/
 
-# Local Codex preview request cache; finished preview JSON/Markdown files may be committed.
+# Provider response cache lives inside the ignored private run state.
 test/runs/*/cache/
