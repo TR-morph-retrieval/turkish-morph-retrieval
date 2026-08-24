@@ -43,6 +43,7 @@ from .schema import (
     localized_repair_schema,
 )
 from .validators import (
+    corpus_problems,
     interpret_morphology_judge,
     interpret_semantic_judges,
     normalize_family,
@@ -94,7 +95,8 @@ def _git_commit() -> str | None:
 def _pipeline_source_hashes() -> dict[str, str]:
     names = (
         "config.py", "pipeline.py", "planner.py", "prompts.py", "schema.py", "taxonomy.py",
-        "validators.py", "dataset_memory.py", "review.py", "judge_report.py",
+        "validators.py", "dataset_memory.py", "providers.py", "ranges.py", "review.py",
+        "judge_report.py",
     )
     return {
         name: hashlib.sha256((HERE / name).read_bytes()).hexdigest()
@@ -115,6 +117,17 @@ def _append_jsonl(path: Path, value: Any, lock: threading.Lock) -> None:
         with path.open("a", encoding="utf-8") as handle:
             handle.write(line)
             handle.flush()
+
+
+def _write_jsonl(path: Path, values: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    payload = "".join(
+        json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n"
+        for value in values
+    )
+    tmp.write_text(payload, encoding="utf-8")
+    tmp.replace(path)
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -647,21 +660,19 @@ def generate(
     if offset < 0:
         raise ValueError("--offset negatif olamaz")
     if offset and limit is None:
-        raise ValueError("--offset yalnız --limit ile pilot koşularında kullanılabilir")
-    end = offset + limit if limit is not None else len(all_slots)
-    if end > len(all_slots):
-        raise ValueError("pilot aralığı 600 slotluk planı aşıyor")
+        raise ValueError("--offset kullanırken --limit de verilmelidir")
     known_generator_ids = {spec["id"] for spec in cfg["generation"]["generators"]}
     if generator_id:
-        if limit is None:
-            raise ValueError("--generator-id yalnız --limit ile pilot koşularında kullanılabilir")
         if generator_id not in known_generator_ids:
             raise ValueError(f"bilinmeyen generator-id: {generator_id}")
-        all_slots = [
-            {**slot, "generator_id": generator_id} if offset <= index < end else slot
-            for index, slot in enumerate(all_slots)
-        ]
-    slots = all_slots[offset:end]
+    eligible_slots = [
+        slot for slot in all_slots
+        if generator_id is None or slot["generator_id"] == generator_id
+    ]
+    end = offset + limit if limit is not None else len(eligible_slots)
+    if end > len(eligible_slots):
+        raise ValueError("seçilen generator/slot aralığı planı aşıyor")
+    slots = eligible_slots[offset:end]
     paths = initialise_run(run_id, cfg, all_slots)
     memory = DatasetMemory(paths.memory)
     accepted_before = current_accepted(run_id)
@@ -836,6 +847,103 @@ def write_plan(run_id: str, config_path: str | None = None, size: int | None = N
     report = {"run_id": run_id, "size": len(slots), "sha256": plan_hash(slots), "statistics": plan_statistics(slots)}
     _write_json(paths.root / "plan_report.json", report)
     return report
+
+
+def sync_shared_shards(
+    run_id: str, input_dir: str | Path, config_path: str | None = None
+) -> dict[str, Any]:
+    """Rebuild local accepted state and SQLite memory from Git-tracked contributor shards."""
+    cfg = load_config(config_path, runtime=False)
+    slots = build_plan(cfg)
+    paths = initialise_run(run_id, cfg, slots)
+    slot_by_id = {slot["slot_id"]: slot for slot in slots}
+    sources = sorted(Path(input_dir).glob("*.jsonl"))
+    combined: dict[str, dict[str, Any]] = {}
+    origins: dict[str, str] = {}
+
+    # Keep locally generated, not-yet-exported records while bringing in teammates' shards.
+    inputs = [(str(paths.accepted), row) for row in read_jsonl(paths.accepted)]
+    for source in sources:
+        inputs.extend((str(source), row) for row in read_jsonl(source))
+
+    for source, family in inputs:
+        slot_id = family.get("slot_id")
+        if slot_id not in slot_by_id:
+            raise ValueError(f"{source}: planda bulunmayan slot_id: {slot_id}")
+        slot = slot_by_id[slot_id]
+        if family.get("generator_id") != slot["generator_id"]:
+            raise ValueError(
+                f"{source}: {slot_id} generator uyuşmazlığı; "
+                f"plan={slot['generator_id']} veri={family.get('generator_id')}"
+            )
+        problems = validate_family(family, slot, cfg)
+        if problems:
+            raise ValueError(f"{source}: {slot_id} deterministic QC geçmedi: {problems[:5]}")
+        previous = combined.get(slot_id)
+        if previous is not None and json.dumps(previous, sort_keys=True) != json.dumps(
+            family, sort_keys=True
+        ):
+            raise ValueError(
+                f"{slot_id} iki farklı içerikle paylaşılmış: {origins[slot_id]} ve {source}"
+            )
+        combined[slot_id] = family
+        origins[slot_id] = source
+
+    ordered = [combined[slot["slot_id"]] for slot in slots if slot["slot_id"] in combined]
+    cross_family_problems = corpus_problems(ordered, cfg)
+    if cross_family_problems:
+        raise ValueError(
+            "shared shard birleşimi cross-family QC geçmedi: "
+            f"{cross_family_problems[:10]}"
+        )
+    _write_jsonl(paths.accepted, ordered)
+    memory = DatasetMemory(paths.memory)
+    for family in ordered:
+        memory.record_outcome(
+            family["slot_id"], "accepted", family, actor="shared_shard_sync"
+        )
+    return {
+        "run_id": run_id,
+        "shard_directory": str(Path(input_dir)),
+        "shard_files": len(sources),
+        "accepted_synced": len(ordered),
+        "remaining": len(slots) - len(ordered),
+        "memory": memory.report(),
+    }
+
+
+def export_shared_shard(
+    run_id: str,
+    output: str | Path,
+    generator_id: str,
+    offset: int,
+    limit: int,
+    config_path: str | None = None,
+) -> dict[str, Any]:
+    """Export exactly one contributor's assigned generator slice as a merge-friendly shard."""
+    if offset < 0 or limit < 1:
+        raise ValueError("offset >= 0 ve limit >= 1 olmalıdır")
+    cfg = load_config(config_path, runtime=False)
+    slots = [
+        slot for slot in build_plan(cfg) if slot["generator_id"] == generator_id
+    ]
+    selected = slots[offset:offset + limit]
+    if len(selected) != limit:
+        raise ValueError("shard aralığı generator kotasını aşıyor")
+    accepted = {row["slot_id"]: row for row in current_accepted(run_id)}
+    missing = [slot["slot_id"] for slot in selected if slot["slot_id"] not in accepted]
+    if missing:
+        raise ValueError(f"shard henüz tamamlanmadı; eksik slot: {missing[:5]}")
+    rows = [accepted[slot["slot_id"]] for slot in selected]
+    destination = Path(output)
+    _write_jsonl(destination, rows)
+    return {
+        "run_id": run_id,
+        "output": str(destination),
+        "generator_id": generator_id,
+        "offset": offset,
+        "count": len(rows),
+    }
 
 
 def default_run_id() -> str:

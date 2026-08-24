@@ -7,11 +7,20 @@ import json
 from pathlib import Path
 
 from .config import load_config
+from .ranges import range_status, run_range, validate_shared_ranges
 from .dataset_memory import DatasetMemory
 from .evaluation import load_items
 from .exports import finalize
 from .judge_report import judge_calibration_report
-from .pipeline import default_run_id, generate, paths_for, read_jsonl, write_plan
+from .pipeline import (
+    default_run_id,
+    export_shared_shard,
+    generate,
+    paths_for,
+    read_jsonl,
+    sync_shared_shards,
+    write_plan,
+)
 from .review import apply_human_reviews, export_human_review
 from .selftest import run as run_selftest
 from .validators import artifact_report, train_test_leakage_problems
@@ -35,14 +44,46 @@ def main() -> int:
 
     generation = sub.add_parser("generate", help="üret + QC + iki-aşamalı judge; kalmayan slotları refill et")
     generation.add_argument("--run-id", default=None)
-    generation.add_argument("--limit", type=int, default=None, help="pilot için plan prefix'i")
-    generation.add_argument("--offset", type=int, default=0, help="pilot için başlangıç slotu")
+    generation.add_argument("--limit", type=int, default=None, help="seçili kuyruktan üretilecek slot sayısı")
+    generation.add_argument("--offset", type=int, default=0, help="seçili generator kuyruğundaki başlangıç")
     generation.add_argument("--workers", type=int, default=None)
     generation.add_argument(
         "--generator-id",
         default=None,
-        help="yalnız --limit pilotunda bütün seçili slotları tek generator ile üret",
+        help="planı değiştirmeden yalnız bu generator'a atanmış slotları seç",
     )
+
+    shared_sync = sub.add_parser(
+        "shared-sync", help="Git'teki contributor shard'larını accepted state ve SQLite'a aktar"
+    )
+    shared_sync.add_argument("--run-id", required=True)
+    shared_sync.add_argument("--input-dir", default="test/data/final_shards")
+
+    shard_export = sub.add_parser(
+        "shard-export", help="tamamlanan generator aralığını paylaşılabilir JSONL shard'a çıkar"
+    )
+    shard_export.add_argument("--run-id", required=True)
+    shard_export.add_argument("--output", required=True)
+    shard_export.add_argument("--generator-id", required=True)
+    shard_export.add_argument("--offset", type=int, required=True)
+    shard_export.add_argument("--limit", type=int, required=True)
+
+    range_show = sub.add_parser(
+        "range-show", help="1-based inclusive sıradaki üretim aralığını çakışmadan doğrula"
+    )
+    range_show.add_argument("--producer", choices=["codex", "claude"], required=True)
+    range_show.add_argument("--from", dest="start", type=int, required=True)
+    range_show.add_argument("--to", dest="end", type=int, required=True)
+
+    range_run = sub.add_parser(
+        "range-run", help="shared sync + sıradaki aralığı üret + manifestli shard export"
+    )
+    range_run.add_argument("--producer", choices=["codex", "claude"], required=True)
+    range_run.add_argument("--from", dest="start", type=int, required=True)
+    range_run.add_argument("--to", dest="end", type=int, required=True)
+    range_run.add_argument("--workers", type=int, default=None)
+
+    sub.add_parser("ranges-report", help="paylaşılan shard sırası ve kapsamını doğrula")
 
     freeze = sub.add_parser(
         "finalize",
@@ -133,6 +174,20 @@ def main() -> int:
             "ingested": memory.ingest_families(rows, args.source),
             "memory": memory.report(),
         }
+    elif args.command == "shared-sync":
+        result = sync_shared_shards(args.run_id, args.input_dir, args.config)
+    elif args.command == "shard-export":
+        result = export_shared_shard(
+            args.run_id, args.output, args.generator_id, args.offset, args.limit, args.config
+        )
+    elif args.command == "range-show":
+        result = range_status(args.producer, args.start, args.end, config_path=args.config)
+    elif args.command == "range-run":
+        result = run_range(
+            args.producer, args.start, args.end, config_path=args.config, workers=args.workers
+        )
+    elif args.command == "ranges-report":
+        result = validate_shared_ranges(config_path=args.config)
     elif args.command == "review-export":
         result = export_human_review(args.run_id)
     elif args.command == "review-apply":

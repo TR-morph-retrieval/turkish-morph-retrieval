@@ -22,6 +22,10 @@ plan → slot reserve → aggregate memory → generate → deterministic QC →
 
 SQLite `WAL` ve `BEGIN IMMEDIATE` rezervasyonu aynı slotun iki workera verilmesini engeller. JSONL
 çıktıları veri teslim formatı olmaya devam eder; registry koordinasyon ve denetim katmanıdır.
+Farklı bilgisayarların SQLite dosyaları doğrudan paylaşılmaz. Kabul edilmiş contributor shard'ları
+Git üzerinden paylaşılır ve `python3 -m test shared-sync --run-id final_v39` ile her makinenin
+yerel registry'sine deterministik biçimde yeniden işlenir. Ayrıntı:
+[`COLLABORATIVE_GENERATION.md`](COLLABORATIVE_GENERATION.md).
 
 ## Komutlar
 

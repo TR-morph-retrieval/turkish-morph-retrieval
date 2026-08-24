@@ -58,6 +58,14 @@ yalnız sayımları ve tekrar edilmemesi gereken lemma/anlatı etiketlerini gör
 memory üzerinden few-shot olarak sızmaz. Tasarım ve import akışı:
 [`DATASET_MEMORY.md`](DATASET_MEMORY.md).
 
+Farklı bilgisayarlarda çalışan ekip üyeleri aynı SQLite dosyasını Git'e koymaz. Kabul edilmiş
+aralıklar `test/data/final_shards/` altında ayrı JSONL dosyaları olarak paylaşılır;
+`range-run` bunları yerel accepted state ve SQLite memory'sine yeniden işler, önceki sıranın
+tamamlandığını doğrular, yalnız istenen yeni 1-based inclusive aralığı üretir ve manifestli shard'a
+çıkarır. Boşluk, çakışma ve üretim sözleşmesi değişikliği reddedilir. Komutlar ve ajanlara verilecek
+operasyon promptu:
+[`COLLABORATIVE_GENERATION.md`](COLLABORATIVE_GENERATION.md).
+
 `development` model/ayar seçimi içindir. `sealed_test`, kararlar tamamlandıktan sonra yalnız final
 sonuç için kullanılır; kapalı tutulması gereken şey veri metni değil, model seçerken final gold
 sonuçlarına tekrar tekrar bakmamaktır.

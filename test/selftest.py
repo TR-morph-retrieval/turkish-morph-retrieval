@@ -38,6 +38,7 @@ from .pipeline import (
 from .schema import generation_batch_schema, localized_repair_schema
 from .providers import ClaudeCliProvider
 from .review import apply_human_reviews, export_human_review
+from .ranges import range_status, validate_shared_ranges
 from .selection import select_balanced
 from .taxonomy import FEATURES, FEATURE_BY_KEY, hard_profile
 from .validators import (
@@ -193,6 +194,23 @@ def run() -> list[str]:
     slots_600 = build_plan(cfg, 600)
     if build_plan(cfg) != slots_600:
         failures.append("varsayılan plan doğrudan 600 kota slotu üretmiyor")
+    with TemporaryDirectory() as temporary:
+        empty_ranges = validate_shared_ranges(temporary)
+        if empty_ranges["coverage"] != {"codex": 0, "claude": 0}:
+            failures.append(f"boş shared range coverage yanlış: {empty_ranges}")
+        first_range = range_status("codex", 1, 50, temporary)
+        if first_range["count"] != 50 or first_range["offset_internal"] != 0:
+            failures.append(f"1-based range dönüşümü yanlış: {first_range}")
+        try:
+            range_status("codex", 50, 120, temporary)
+            failures.append("ilk shared range 1 yerine 50'den başlayabildi")
+        except ValueError:
+            pass
+        try:
+            range_status("claude", 1, 10, temporary)
+            failures.append("Claude sırası 300 Codex family tamamlanmadan başlayabildi")
+        except ValueError:
+            pass
     stats = plan_statistics(slots_600)
     split_counts = Counter(slot["target_split"] for slot in slots_600)
     if split_counts != {"development": 100, "sealed_test": 500}:

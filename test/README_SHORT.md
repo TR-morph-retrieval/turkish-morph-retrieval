@@ -30,6 +30,13 @@ rezerve eder; kabul edilen fenomen/lemma/anlatı metadata'sından aggregate cove
 etiketler üretir. Önceki test cümleleri generator promptuna verilmez. Ayrıntı:
 [`DATASET_MEMORY.md`](DATASET_MEMORY.md).
 
+Farklı bilgisayarlarda SQLite paylaşılmaz. Git'te tutulan JSONL shard + manifest çiftleri her
+kişinin yerel accepted state ve SQLite memory'sine alınır. Kullanıcı 1-based inclusive sıradaki
+aralığı `range-run --producer codex --from 51 --to 120` biçiminde verir; sync, sözleşme kontrolü,
+üretim ve manifestli shard export otomatik yapılır. Boşluk veya çakışma reddedilir.
+Komutlar ve hazır ajan talimatı:
+[`COLLABORATIVE_GENERATION.md`](COLLABORATIVE_GENERATION.md).
+
 Strict modda gold–`hard_01` yalnız hedef biçimde ayrışır. Controlled modda gold ve hard farklı
 doğal sözdizimi kullanabilir. Natural modda query, gold ve negatifler bağımsız yazılabilir; gold
 bilgi ihtiyacını karşılayan tek passage'dır. Lexical kapılar moda göre 4/3/2 içerik-koruyan hard
