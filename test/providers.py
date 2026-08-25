@@ -364,7 +364,6 @@ class ClaudeCliProvider:
             "--json-schema", json.dumps(output_schema, ensure_ascii=False, separators=(",", ":")),
             "--max-turns", "1",
             "--tools", "",
-            "--bare",
             "--no-session-persistence",
             "--permission-mode", "plan",
             "--system-prompt", system.strip(),
