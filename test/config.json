@@ -104,7 +104,7 @@
       {
         "id": "generator_b",
         "provider": "claude_cli",
-        "model": "${TEST_CLAUDE_GENERATOR_MODEL:-claude-sonnet-4-6}",
+        "model": "${TEST_CLAUDE_GENERATOR_MODEL:-claude-opus-5}",
         "authentication_mode": "claude_subscription",
         "reasoning_effort": "medium",
         "timeout_seconds": 1800

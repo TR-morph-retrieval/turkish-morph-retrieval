@@ -150,10 +150,6 @@ def range_status(
     if start < 1 or end < start or end > 300:
         raise ValueError("aralık 1-based inclusive ve 1 <= from <= to <= 300 olmalıdır")
     shared = validate_shared_ranges(shard_dir, run_id, config_path)
-    if producer == "claude" and int(shared["coverage"]["codex"]) != 300:
-        raise ValueError(
-            "Claude sırası Codex'in 300 family'si tamamlanıp pushlanmadan başlayamaz"
-        )
     expected_start = int(shared["coverage"][producer]) + 1
     if start != expected_start:
         raise ValueError(

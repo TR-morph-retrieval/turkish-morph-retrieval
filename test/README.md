@@ -388,8 +388,9 @@ python3 -m test memory-ingest --run-id test_v39_final --input TRAIN.json \
 codex login status
 claude  # ilk açılışta /login ile Claude abonelik hesabını seç
 export OPENROUTER_API_KEY="..."
-export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
-export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
+# Opsiyonel override; varsayılanlar gpt-5.6-sol ve claude-opus-5 (ikisi de medium).
+# export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
+# export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 
 # 1-slot ücretli smoke test; varsayılan judge'lar DeepSeek V4 Flash + GLM 5.2'dir.
 python3 -m test generate --run-id smoke_v39 --limit 1 --workers 1
@@ -421,8 +422,8 @@ aynı nihai pipeline'ı kullanır. Generator çağrıları aynı modele ait üç
 structured-output isteğinde üretir; deterministic QC, iki bağımsız judge, sorunlu slot onarımı ve
 SQLite kaydı family bazında kalır. Yeni veriler yalnız
 `runs/<run-id>/` altındaki plan, SQLite registry, accepted/rejected kayıtları ve provider
-provenance'ı üzerinden ilerler. Küçük smoke koşusundan çıkarılan `data/pilot_verisi_5.json` yalnız
-pipeline ve encoder kontrolü içindir; paper release final insan kontrolü ve freeze sonrasında çıkar.
+provenance'ı üzerinden ilerler. Küçük notebook resmî shard'ların ilk beş family'sini kullanır;
+ayrı bir eski pilot JSON tutulmaz. Paper release final insan kontrolü ve freeze sonrasında çıkar.
 
 ## Ana dosyalar
 
@@ -441,8 +442,7 @@ pipeline ve encoder kontrolü içindir; paper release final insan kontrolü ve f
 | `exports.py` | Freeze, blind/internal JSON, BEIR ve qrels |
 | `morphology.py` | Opsiyonel Stanza audit'i |
 | `evaluation.py` | Metrikler, baseline, ablation ve istatistik |
-| `data/pilot_verisi_5.json` | Güncel v3.9 generator + iki-judge smoke çıktısı |
-| `notebooks/morph_baseline_eval_pilot5_colab.ipynb` | Beş-family / 55-belge hızlı test |
+| `notebooks/morph_baseline_eval_pilot5_colab.ipynb` | Resmî shard'lardan beş-family / 55-belge hızlı test |
 | `notebooks/morph_baseline_eval_600_colab.ipynb` | 100 dev + 500 final paper değerlendirmesi |
 
 Freeze çıktıları:

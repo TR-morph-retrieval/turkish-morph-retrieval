@@ -14,8 +14,10 @@ Aralıklar 1'den başlar ve iki uç da dahildir. Örneğin:
 - `50–120` reddedilir; 50. family önceki shard'da bulunduğu için çakışır.
 
 Codex ve Claude'un ayrı 300'er slotluk sırası vardır. Kod bunları plandaki `generator_a` ve
-`generator_b` slotlarına dönüştürür; kullanıcı offset hesaplamaz. Claude sırası, Codex'in 300
-family'si tamamlanıp pushlanmadan açılamaz; böylece Claude üretimi bütün Codex metadata'sını görür.
+`generator_b` slotlarına dönüştürür; kullanıcı offset hesaplamaz. İki üretici dönüşümlü batch'lerle
+ilerleyebilir: örneğin Codex `1–50`, Claude `1–50`, Codex `51–100`. Her batch'ten sonra shard ve
+manifest pushlanır; sıradaki kişi pull ettiği için önceki bütün metadata yerel SQLite memory'ye
+aktarılır. Bilimsel olarak gereksiz olan “önce Codex'in 300'ü bitsin” kilidi yoktur.
 
 ## Tek komut
 
@@ -71,6 +73,11 @@ ve commit hash'ini söyle.
 ```
 
 Claude için yalnız “Codex sırası” yerine “Claude sırası” denir; pipeline doğru generator'ı seçer.
+
+Üreticiler aynı anda çalıştırılmamalıdır. Her batch tamamlanıp pushlandıktan sonra sıradaki kişi
+`git pull --ff-only` ile başlamalıdır. Kod her üreticinin kendi 1–300 sırasındaki boşluk ve
+çakışmaları engeller; Git üzerinde sırayla çalışma ise iki farklı makinenin aynı eski memory
+anlık görüntüsünden üretim yapmasını önler.
 
 ## Güvenlik garantileri
 

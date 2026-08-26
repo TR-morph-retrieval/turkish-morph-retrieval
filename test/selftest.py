@@ -191,6 +191,18 @@ def run() -> list[str]:
         failures.append(f"truncated ranking metrikleri yanlış: {trunc_summary}")
 
     cfg = load_config(runtime=False)
+    generators = {row["id"]: row for row in cfg["generation"]["generators"]}
+    claude_spec = generators["generator_b"]
+    if (
+        not os.getenv("TEST_CLAUDE_GENERATOR_MODEL")
+        and claude_spec["model"] != "claude-opus-5"
+    ):
+        failures.append(f"Claude varsayılan modeli Opus 5 değil: {claude_spec['model']}")
+    if claude_spec.get("reasoning_effort") != "medium":
+        failures.append(
+            "Claude üretim reasoning effort değeri medium değil: "
+            f"{claude_spec.get('reasoning_effort')}"
+        )
     slots_600 = build_plan(cfg, 600)
     if build_plan(cfg) != slots_600:
         failures.append("varsayılan plan doğrudan 600 kota slotu üretmiyor")
@@ -206,11 +218,12 @@ def run() -> list[str]:
             failures.append("ilk shared range 1 yerine 50'den başlayabildi")
         except ValueError:
             pass
-        try:
-            range_status("claude", 1, 10, temporary)
-            failures.append("Claude sırası 300 Codex family tamamlanmadan başlayabildi")
-        except ValueError:
-            pass
+        first_claude_range = range_status("claude", 1, 10, temporary)
+        if first_claude_range["count"] != 10 or first_claude_range["offset_internal"] != 0:
+            failures.append(
+                "Claude bağımsız sırası Codex 300 kilidi olmadan başlayamadı: "
+                f"{first_claude_range}"
+            )
     stats = plan_statistics(slots_600)
     split_counts = Counter(slot["target_split"] for slot in slots_600)
     if split_counts != {"development": 100, "sealed_test": 500}:
@@ -1040,9 +1053,13 @@ def _check_claude_cli_adapter() -> list[str]:
         command = captured.get("command", [])
         if response.data != {"ok": True} or response.actual_model != "claude-fixture-model":
             failures.append("Claude CLI structured output/provenance ayrıştırması yanlış")
-        for flag in ("--model", "--json-schema", "--tools", "--no-session-persistence"):
+        for flag in (
+            "--model", "--effort", "--json-schema", "--tools", "--no-session-persistence",
+        ):
             if flag not in command:
                 failures.append(f"Claude CLI güvenli structured-output flag'i eksik: {flag}")
+        if "--effort" in command and command[command.index("--effort") + 1] != "medium":
+            failures.append("Claude CLI varsayılan effort değeri medium değil")
     return failures
 
 

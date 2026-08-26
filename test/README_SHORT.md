@@ -61,10 +61,9 @@ Bu öncelik koşullarını taşıyan kabul edilmiş family'ler
 
 Eski ayrı preview üretim kodu final üretim öncesinde kaldırılmıştır. Pilot ve ana üretim aynı
 nihai pipeline'ı kullanır; ilk üretim çağrıları üç family'lik batch, bütün QC/judge/refill ve SQLite
-kayıtları family bazındadır. Güncel beş-family smoke veri
-`data/pilot_verisi_5.json` dosyasına çıkarılır ve
-`notebooks/morph_baseline_eval_pilot5_colab.ipynb` ile hızlıca değerlendirilir; 600-family paper
-notebook'u bundan ayrıdır.
+kayıtları family bazındadır. Resmî shard'ların ilk beş family'si
+`notebooks/morph_baseline_eval_pilot5_colab.ipynb` ile hızlıca değerlendirilir; ayrı bir eski pilot
+JSON tutulmaz. 600-family paper notebook'u bundan ayrıdır.
 
 Qrels family oluşturulurken hazırdır:
 
@@ -89,8 +88,9 @@ python3 -m test plan --run-id test_v39_final
 python3 -m test memory-report --run-id test_v39_final
 
 export OPENROUTER_API_KEY="..."
-export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
-export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
+# Opsiyonel override; varsayılanlar gpt-5.6-sol ve claude-opus-5 (medium).
+# export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
+# export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 # Opsiyonel override; varsayılanlar aşağıdaki ücretli ve ZDR uyumlu modellerdir.
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
 export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"

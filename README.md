@@ -7,8 +7,7 @@ araştırma projesi. Repo artık veri yaşam döngüsünü iki bağımsız parç
 |---|---|
 | [`train/`](train/) | Eski Gemini train/dev generator'ı, model-selection araçları ve v2.0–v2.2 JSON geçmişi. Bu bölüm korunmuş legacy sistemdir. |
 | [`test/`](test/) | 100 development + 500 final test; iki generator, bağımsız LLM judge, otomatik QC/qrels/freeze. |
-| [`test/data/pilot_verisi_5.json`](test/data/pilot_verisi_5.json) | Güncel üretim ve judge hattından çıkan beş-family smoke verisi; paper sonucu değildir. |
-| [`test/notebooks/morph_baseline_eval_pilot5_colab.ipynb`](test/notebooks/morph_baseline_eval_pilot5_colab.ipynb) | Güncel beş-family smoke verisini hızlıca değerlendiren küçük notebook. |
+| [`test/notebooks/morph_baseline_eval_pilot5_colab.ipynb`](test/notebooks/morph_baseline_eval_pilot5_colab.ipynb) | Resmî shard'ların ilk beş family'sini hızlıca değerlendiren küçük notebook. |
 | [`test/notebooks/morph_baseline_eval_600_colab.ipynb`](test/notebooks/morph_baseline_eval_600_colab.ipynb) | 100 development + 500 final için eksiksiz paper değerlendirmesi. |
 
 Eski 50-family JSON ve önceki veri sürümü
@@ -49,8 +48,9 @@ API üretimi için:
 
 ```bash
 export OPENROUTER_API_KEY="..."
-export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
-export TEST_CLAUDE_GENERATOR_MODEL="claude-full-model-id"
+# Opsiyonel override; varsayılanlar gpt-5.6-sol ve claude-opus-5 (medium).
+# export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
+# export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
 export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
 python3 -m test generate --run-id test_v39_final
