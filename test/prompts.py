@@ -130,6 +130,13 @@ def build_generation_prompt(slot: dict) -> str:
         if feature["key"] == "Q.PART.SCOPE"
         else "Query doğal bir durumu İDDİA etmeli; evet/hayır sorusu ve ‘kaydı bul/arıyorum’ dili kullanma."
     )
+    candidate_form_rule = (
+        "Bu Q.PART.SCOPE family’sinde positive, sekiz hard ve iki easy dahil 11 adayın "
+        "critical_sentence alanı doğal bir soru cümlesi olmalı ve `?` ile bitmeli."
+        if feature["key"] == "Q.PART.SCOPE"
+        else "Bu family’de 11 adayın critical_sentence alanı bildirim cümlesi olmalı; `?` ile biten "
+             "soru cümlesi kullanma."
+    )
     allomorph_rule = (
         "Bu bir ALLOMORPH INVARIANCE family’sidir: pozitif, aynı gramatik işlevi farklı geçerli "
         "yüzey biçimiyle korumalıdır. Geçerli allomorf hard/easy negatif OLAMAZ. Negatifler başka "
@@ -228,6 +235,7 @@ HEDEF
   değiştirmemeli; ayrım yalnız `critical_sentence` içinde yerel kalmalı.
 - Adayların token uzunlukları ve ayrıntı yoğunluğu birbirine yakın olmalı. Gold sistematik olarak en uzun olamaz.
 - {query_rule}
+- {candidate_form_rule}
 - Positive sorgudaki aynı bilgi ihtiyacını/önermeyi karşılamalı; fakat query'nin tek sözcüğü
   değiştirilmiş kopyası OLMAMALI. Yalnız `yolculuklarda → seyahatlerinde` gibi bir eşanlamlı
   değişimi yeterli değildir. En az iki anlam-koruyan ifade değişikliğiyle birlikte doğal bir

@@ -306,6 +306,8 @@ Family düzeyi:
 - Tam `1 positive + 8 hard + 2 easy`
 - Eksiksiz ve benzersiz candidate slot/ID'leri
 - Query/pasaj için planlanan cümle sayısı
+- `Q.PART.SCOPE` için query ve 11 kritik aday cümlesinin tamamı soru biçiminde; diğer
+  75 fenomen için query ve kritik aday cümlelerinin tamamı düz bildirim biçiminde
 - Kritik sözcüğün gerçekten metinde bulunması
 - Strict minimal-pair iskeleti ve `edit_script` uyumu
 - Allomorph/function ayrımı

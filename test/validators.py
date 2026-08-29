@@ -384,6 +384,19 @@ def validate_family(family: dict[str, Any], slot: dict[str, Any], cfg: dict[str,
         problems.append("Q.PART.SCOPE query doğal bir odak sorusu olmalı")
     elif not is_focus_question and query.rstrip().endswith("?"):
         problems.append("query soru cümlesi olamaz")
+    for candidate in candidates:
+        critical_sentence = candidate.get("critical_sentence", "")
+        is_candidate_question = (
+            isinstance(critical_sentence, str) and critical_sentence.rstrip().endswith("?")
+        )
+        if is_focus_question and not is_candidate_question:
+            problems.append(
+                f"{candidate.get('id')} Q.PART.SCOPE critical_sentence soru biçiminde olmalı"
+            )
+        elif not is_focus_question and is_candidate_question:
+            problems.append(
+                f"{candidate.get('id')} bildirim family’sinde critical_sentence soru olamaz"
+            )
     lowered_query = tr_lower(query)
     if any(pattern in lowered_query for pattern in _META_PATTERNS):
         problems.append("query meta-arama dili içeriyor")

@@ -381,6 +381,30 @@ def run() -> list[str]:
     problems = validate_family(family, slot, cfg)
     if problems:
         failures.append(f"geçerli fixture reddedildi: {problems}")
+    statement_with_question = deepcopy(family)
+    statement_with_question["candidates"][0]["critical_sentence"] = (
+        statement_with_question["candidates"][0]["critical_sentence"].rstrip(".") + "?"
+    )
+    if not any(
+        "bildirim family’sinde critical_sentence soru olamaz" in problem
+        for problem in validate_family(statement_with_question, slot, cfg)
+    ):
+        failures.append("bildirim family’sindeki soru biçimli aday reddedilmedi")
+    focus_question_family = deepcopy(family)
+    focus_question_family["target_feature"] = "Q.PART.SCOPE"
+    focus_question_family["query"] = focus_question_family["query"].rstrip(".") + "?"
+    if not any(
+        "Q.PART.SCOPE critical_sentence soru biçiminde olmalı" in problem
+        for problem in validate_family(focus_question_family, slot, cfg)
+    ):
+        failures.append("Q.PART.SCOPE içindeki bildirim biçimli aday reddedilmedi")
+    for candidate in focus_question_family["candidates"]:
+        candidate["critical_sentence"] = candidate["critical_sentence"].rstrip(".") + "?"
+    if any(
+        "critical_sentence soru biçiminde olmalı" in problem
+        for problem in validate_family(focus_question_family, slot, cfg)
+    ):
+        failures.append("Q.PART.SCOPE içindeki soru biçimli aday yanlış reddedildi")
     with TemporaryDirectory() as temporary:
         memory = DatasetMemory(Path(temporary) / "dataset_memory.sqlite3")
         second_slot = deepcopy(slot)

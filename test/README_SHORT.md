@@ -11,6 +11,8 @@
 - Query: `%75` 1 cümle, `%25` 2 cümle.
 - Pasaj: `%30/%30/%30/%10` oranında 1/2/3/4 cümle.
 - 76 fenomen, 6 macro grup; morph-hard ve semantic-hard ayrı raporlanır.
+- `Q.PART.SCOPE` query ve 11 kritik aday cümlesini soru biçiminde tutar; diğer 75 fenomenin
+  query ve kritik aday cümleleri düz bildirimdir.
 - Oflazer-informed yeni beşli: `MORPH.CONTEXT_AMBIG`, `DERIV.IG_CHAIN`,
   `CASE.ROLE.FRAME`, `SUSP.AFFIX`, `MWE.MORPH`.
 
