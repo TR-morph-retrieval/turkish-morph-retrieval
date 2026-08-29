@@ -19,7 +19,7 @@
     "raw_00016_8203cf2510",
     "raw_00017_117b894994"
   ],
-  "shard_sha256": "b9ae4be41afd07e19a38637dd054c857246a6921761ed17097087d0aa2ee705d",
+  "shard_sha256": "93a2272e51bf80219e96e0b22c9673a6fbd08cd59e65f48665449f2a82621891",
   "run_contract": {
     "dataset_version": "3.9.0",
     "prompt_version": "test-prompts-3.9.6-glm53-possessive-calibration",
