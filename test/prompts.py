@@ -9,7 +9,7 @@ import hashlib
 import json
 import random
 
-PROMPT_VERSION = "test-prompts-3.9.4-local-candidate-repair"
+PROMPT_VERSION = "test-prompts-3.9.6-glm53-possessive-calibration"
 
 GENERATOR_SYSTEM = """\
 Sen Türkçe biçimbilim ve bilgi erişimi için contrast-set yazan uzman bir veri küratörüsün.
@@ -407,6 +407,7 @@ Kısa ID listeleri ve kısa not dışında aday-bazlı açıklama üretme.
 
 
 def build_morphology_judge_prompt(family: dict) -> str:
+    valid_candidate_ids = [candidate["id"] for candidate in family["candidates"]]
     visible = {
         "query": family["query"],
         "target_feature": family["target_feature"],
@@ -429,14 +430,26 @@ KURALLAR
    farklılığı nedeniyle morfolojik eşleşmeyi dışlama.
 2. `morphologically_invalid_candidate_ids`: doğal/dilbilgisel Türkçe çekim taşımayan ID'ler.
    Negatif veya komşu özellik kullanmak tek başına biçimbilimsel bozukluk değildir.
+   Hedef özelliği taşımayan ama Türkçede geçerli olan bir adayı bu listeye yazma.
 3. `unclear_candidate_ids`: morfolojik statüsüne güvenle karar veremediğin ID'ler.
 4. Kapsam, kişi, sayı, iyelik, zaman/kip ve ek zinciri işlevini yüzey benzerliğinden ayrı kontrol et.
 5. CASE/CAUS/PASS/REFL/RECP hedeflerinde hâl veya çatı işaretinin agent, patient/theme,
    goal/recipient, source ve causer rollerini nasıl değiştirdiğini izle. DERIV.IG_CHAIN'de kök POS,
    türetim sınırları ve final POS'u; MORPH.CONTEXT_AMBIG'de yüzey biçiminden çok bağlamsal analizi
    esas al. SUSP.AFFIX ve MWE.MORPH'ta işlev birden fazla tokena yayılabilir.
-6. Geçerli allomorfu yanlış saydıysan allomorph_treated_as_wrong=true ver.
-7. Emin değilsen abstain=true ver. Confidence, yalnız morfolojik kararın 0–100 güvenidir.
+6. İyelik kişi/sayısını özellikle ayır: `araban/portföyün`=POSS.2SG,
+   `arabanız/portföyünüz`=POSS.2PL veya nezaket, `arabası/portföyü`=POSS.3SG.
+   Ünlüyle biten `dosya` paradigması: `dosyam`=POSS.1SG, `dosyan`=POSS.2SG,
+   `dosyası`=POSS.3SG, `dosyamız`=POSS.1PL, `dosyanız`=POSS.2PL.
+   `müşterinin cüzdanlarından` gibi tekil possessor + çoğul possessed yapılar dilbilgiseldir;
+   possessor sayısı ile nesne sayısını karıştırma.
+7. SUSP.AFFIX hedefinde ek, koordinasyondaki son öğede yüzeyleşip iki eşleniğe de ortak
+   işlev vermelidir; yalnız benzer anlamlı farklı bir koordinasyon hedefi korumuş sayılmaz.
+8. Geçerli allomorfu yanlış saydıysan allomorph_treated_as_wrong=true ver.
+9. ID alanlarında yalnız aşağıdaki tam ID'leri kullan. ID'yi kısaltma, `c01` veya `..._c01`
+   yazma ve listede olmayan ID üretme:
+   {json.dumps(valid_candidate_ids, ensure_ascii=False)}
+10. Emin değilsen abstain=true ver. Confidence, yalnız morfolojik kararın 0–100 güvenidir.
 """
 
 

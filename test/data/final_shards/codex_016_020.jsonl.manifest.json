@@ -14,15 +14,15 @@
     "raw_00037_be4022ed10",
     "raw_00039_b7484cca8c"
   ],
-  "shard_sha256": "51e5a4876325ae5fdaf72b2e40772dba6eab5b3f589fdef9839f66ae3a11e788",
+  "shard_sha256": "edcaa50b9029d1412411d8f3bbe1c6fd9cd74d10d0e346fc663ddce5210f9da2",
   "run_contract": {
     "dataset_version": "3.9.0",
-    "prompt_version": "test-prompts-3.9.4-local-candidate-repair",
+    "prompt_version": "test-prompts-3.9.6-glm53-possessive-calibration",
     "pipeline_source_sha256": {
       "config.py": "94f9ef77cc48ed16d12340b6fa1dfa0bb6a3ddb8e4aa17d188ed3beda3fb4e99",
       "pipeline.py": "4a30f112aeb684f90d8f3ceaa2e8531512102daec6e0b66d9a21b14ace8a524b",
       "planner.py": "8db4b7005894137e7cda4a86830274561f1fbd00d200152d43b2cc70413beea1",
-      "prompts.py": "32e11b6566e0d5a279cd1c5e5de02c9b6cd7a3e4ed844806673f9d0222c2220e",
+      "prompts.py": "f6aa03ee8abb0b01fa698797553fb32f5f8a05bcf38971d2657a8f2c5ffefba2",
       "schema.py": "ca4360de53151d4d54625b8f0935d458272724c25123ba24220f7bd32fe3fa39",
       "taxonomy.py": "e1e8c849899fa68d2ce42bcf3fc2fd3fba16d36b30d881a6130c6c4bcce2f6e4",
       "validators.py": "b0b8a22d9261b971addb19ec0a24946939aa55f8876125238aeb6563e85c094b",
@@ -32,7 +32,7 @@
       "review.py": "38a2640189b528d4f8e834605909afb5aea3aea7b1aa87278b62c6e46241a213",
       "judge_report.py": "38fa0575118d97dc71f3edcfcfb71a0e1212115b58cc331c8df21858b2f2c3dc"
     },
-    "config_sha256": "e76e474af25e0d51e4c1b35323a052d61e362f97f023e39844b0f90f218bcf95",
+    "config_sha256": "01ee0dd33a99613ee6d081a777cc31310bd44556576daa277623d601bb99b116",
     "plan_sha256": "be6422278d30cce167a30326ad97578cfa809417800989603223379c0bfc4504",
     "generation_batch_size": 3,
     "generators": [
@@ -66,7 +66,7 @@
       "morphology": {
         "enabled": true,
         "provider": "openrouter",
-        "model": "z-ai/glm-5.2",
+        "model": "z-ai/glm-5.3-flash",
         "provider_preferences": {
           "require_parameters": true,
           "sort": "latency",
@@ -90,5 +90,5 @@
       "stage": "final_freeze_only"
     }
   },
-  "run_contract_sha256": "9be3bf87d1ed23d7f1ed4a7d20e1e6e0e054a49e1db55f66f5a172f8e75a170d"
+  "run_contract_sha256": "1b0c7408b742256c7af2c2925b84faa0b39a9334e59cec0ac33d4f74a2ab99d2"
 }

@@ -93,8 +93,9 @@ export OPENROUTER_API_KEY="..."
 # export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 # Opsiyonel override; varsayılanlar aşağıdaki ücretli ve ZDR uyumlu modellerdir.
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
-export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
+export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.3-flash"
 python3 -m test generate --run-id test_v39_final
+# GLM 5.3 Flash low reasoning kullanır; reasoning metni saklanmaz.
 python3 -m test review-export --run-id test_v39_final  # 600 accepted family hazır olunca
 python3 -m test review-apply --run-id test_v39_final --input decisions.jsonl
 python3 -m test judge-report --run-id test_v39_final

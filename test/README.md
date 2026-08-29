@@ -392,13 +392,15 @@ export OPENROUTER_API_KEY="..."
 # export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
 # export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 
-# 1-slot ücretli smoke test; varsayılan judge'lar DeepSeek V4 Flash + GLM 5.2'dir.
+# 1-slot ücretli smoke test; varsayılan judge'lar DeepSeek V4 Flash + GLM 5.3 Flash'tır.
 python3 -m test generate --run-id smoke_v39 --limit 1 --workers 1
 
 # İstenirse modeller environment ile override edilebilir.
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
-export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
+export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.3-flash"
 python3 -m test generate --run-id test_v39_final
+
+# GLM 5.3 Flash: zorunlu low reasoning; reasoning metni response'a eklenmez.
 
 # 600 accepted family tamamlanınca freeze öncesi kör insan review
 python3 -m test review-export --run-id test_v39_final

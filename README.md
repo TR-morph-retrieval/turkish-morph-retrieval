@@ -52,9 +52,11 @@ export OPENROUTER_API_KEY="..."
 # export TEST_CODEX_GENERATOR_MODEL="gpt-5.6-sol"
 # export TEST_CLAUDE_GENERATOR_MODEL="claude-opus-5"
 export TEST_SEMANTIC_JUDGE_MODEL="deepseek/deepseek-v4-flash-0731"
-export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.2"
+export TEST_MORPHOLOGY_JUDGE_MODEL="z-ai/glm-5.3-flash"
 python3 -m test generate --run-id test_v39_final
 ```
+
+GLM 5.3 Flash morphology judge zorunlu `low` reasoning ile çalışır; reasoning metni çıktıya eklenmez.
 
 Generator'lar Codex ve Claude abonelik CLI'larını, bağımsız judge'lar OpenRouter API'sini kullanır.
 Model kimlikleri, prompt/config sürümü, request hash'leri, token kullanımı ve git commit'i run
