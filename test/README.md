@@ -447,6 +447,7 @@ ayrı bir eski pilot JSON tutulmaz. Paper release final insan kontrolü ve freez
 | `morphology.py` | Opsiyonel Stanza audit'i |
 | `evaluation.py` | Metrikler, baseline, ablation ve istatistik |
 | `notebooks/morph_baseline_eval_pilot5_colab.ipynb` | Resmî shard'lardan beş-family / 55-belge hızlı test |
+| `notebooks/morph_baseline_eval_300_colab.ipynb` | İlk 300 Codex family'siyle 50 dev + 250 sealed midpoint değerlendirmesi |
 | `notebooks/morph_baseline_eval_600_colab.ipynb` | 100 dev + 500 final paper değerlendirmesi |
 
 Freeze çıktıları:

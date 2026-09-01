@@ -107,3 +107,5 @@ python3 -m test finalize --run-id test_v39_final
 
 Detaylar: [`README.md`](README.md). Final Colab:
 [`notebooks/morph_baseline_eval_600_colab.ipynb`](notebooks/morph_baseline_eval_600_colab.ipynb).
+İlk 300 Codex family'si için ara kontrol Colab'ı:
+[`notebooks/morph_baseline_eval_300_colab.ipynb`](notebooks/morph_baseline_eval_300_colab.ipynb).
