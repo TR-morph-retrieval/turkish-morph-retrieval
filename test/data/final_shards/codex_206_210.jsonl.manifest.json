@@ -1,0 +1,94 @@
+{
+  "manifest_version": 1,
+  "run_id": "final_v39",
+  "producer": "codex",
+  "generator_id": "generator_a",
+  "from": 206,
+  "to": 210,
+  "family_count": 5,
+  "shard_file": "codex_206_210.jsonl",
+  "slot_ids": [
+    "raw_00412_50e1c2dce4",
+    "raw_00414_750ac8578e",
+    "raw_00415_6d07f87f37",
+    "raw_00416_399d19e5db",
+    "raw_00419_d292b9c778"
+  ],
+  "shard_sha256": "a9e38f3673b030d38fc028da9e741cbcace130deae3b95e4c96b4ad246bb0dd5",
+  "run_contract": {
+    "dataset_version": "3.9.0",
+    "prompt_version": "test-prompts-3.9.6-glm53-possessive-calibration",
+    "pipeline_source_sha256": {
+      "config.py": "94f9ef77cc48ed16d12340b6fa1dfa0bb6a3ddb8e4aa17d188ed3beda3fb4e99",
+      "pipeline.py": "4a30f112aeb684f90d8f3ceaa2e8531512102daec6e0b66d9a21b14ace8a524b",
+      "planner.py": "8db4b7005894137e7cda4a86830274561f1fbd00d200152d43b2cc70413beea1",
+      "prompts.py": "1c318515f85d3bac904bc47125cda6fe89b1c76b6c9269003bf9d9f210ec1381",
+      "schema.py": "ca4360de53151d4d54625b8f0935d458272724c25123ba24220f7bd32fe3fa39",
+      "taxonomy.py": "e1e8c849899fa68d2ce42bcf3fc2fd3fba16d36b30d881a6130c6c4bcce2f6e4",
+      "validators.py": "eb2fdc452adc771f752609ec04f4cd24eb50cc8adca558788fc53ac2dc17088e",
+      "dataset_memory.py": "35bc1a651f822b158c72fd965aeaedfad99f494c26bdec00486f87f3287d89a4",
+      "providers.py": "02dbfcb9388dc927ae7e7ebabc412670de745263b035e2c6d6d606d63a09301f",
+      "ranges.py": "80f458c8b023d244e8439bc21f1ea44b636516fba6d04a9d8ff8b8f92897ac10",
+      "review.py": "38a2640189b528d4f8e834605909afb5aea3aea7b1aa87278b62c6e46241a213",
+      "judge_report.py": "38fa0575118d97dc71f3edcfcfb71a0e1212115b58cc331c8df21858b2f2c3dc"
+    },
+    "config_sha256": "01ee0dd33a99613ee6d081a777cc31310bd44556576daa277623d601bb99b116",
+    "plan_sha256": "be6422278d30cce167a30326ad97578cfa809417800989603223379c0bfc4504",
+    "generation_batch_size": 3,
+    "generators": [
+      {
+        "id": "generator_a",
+        "provider": "codex_cli",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "medium",
+        "authentication_mode": "chatgpt_subscription"
+      },
+      {
+        "id": "generator_b",
+        "provider": "claude_cli",
+        "model": "claude-opus-5",
+        "reasoning_effort": "medium",
+        "authentication_mode": "claude_subscription"
+      }
+    ],
+    "judges": {
+      "semantic": {
+        "enabled": true,
+        "provider": "openrouter",
+        "model": "deepseek/deepseek-v4-flash-0731",
+        "provider_preferences": {
+          "require_parameters": true,
+          "sort": "latency",
+          "data_collection": "deny",
+          "zdr": true
+        }
+      },
+      "morphology": {
+        "enabled": true,
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3-flash",
+        "provider_preferences": {
+          "require_parameters": true,
+          "sort": "latency",
+          "data_collection": "deny",
+          "zdr": true
+        }
+      },
+      "adjudicator": {
+        "enabled": false,
+        "provider": "openrouter",
+        "model": "",
+        "provider_preferences": {
+          "require_parameters": true,
+          "data_collection": "deny",
+          "zdr": true
+        }
+      }
+    },
+    "human_review": {
+      "reviewers_required": 1,
+      "stage": "final_freeze_only"
+    }
+  },
+  "run_contract_sha256": "16acdac568d190c641bc93e44b011274cf28612f1aa7e1f0bd9a0e3131198819"
+}
