@@ -39,6 +39,10 @@ aralığı `range-run --producer codex --from 51 --to 120` biçiminde verir; syn
 Komutlar ve hazır ajan talimatı:
 [`COLLABORATIVE_GENERATION.md`](COLLABORATIVE_GENERATION.md).
 
+Codex `1–300` tamamlandıktan sonra Claude kendi bağımsız `1–300` sırasını 15-family shard'larla
+üretir ve her shard'ı ayrı pushlar. Claude yalnız generator'dır; DeepSeek + GLM judge hattı ve
+refill kuralları değişmez. İnsan review ancak toplam 600 accepted family sonunda başlar.
+
 Strict modda gold–`hard_01` yalnız hedef biçimde ayrışır. Controlled modda gold ve hard farklı
 doğal sözdizimi kullanabilir. Natural modda query, gold ve negatifler bağımsız yazılabilir; gold
 bilgi ihtiyacını karşılayan tek passage'dır. Lexical kapılar moda göre 4/3/2 içerik-koruyan hard

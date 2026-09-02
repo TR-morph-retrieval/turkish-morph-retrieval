@@ -74,6 +74,37 @@ ve commit hash'ini söyle.
 
 Claude için yalnız “Codex sırası” yerine “Claude sırası” denir; pipeline doğru generator'ı seçer.
 
+## Codex 300 tamamlandıktan sonra Claude üretimi
+
+Mevcut resmî durumda Codex sırası `1–300` tamamlanmıştır. İkinci üretici yalnız Claude sırasını
+`1–300` arasında, 15-family shard'lar hâlinde üretir:
+
+```text
+1–15, 16–30, 31–45, 46–60, 61–75,
+76–90, 91–105, 106–120, 121–135, 136–150,
+151–165, 166–180, 181–195, 196–210, 211–225,
+226–240, 241–255, 256–270, 271–285, 286–300
+```
+
+İlk aralıktan önce `git pull --ff-only`, `self-test`, `ranges-report` ve
+`range-show --producer claude --from 1 --to 15` çalıştırılır. Beklenen başlangıç kapsamı
+`Codex=300, Claude=0` olmalıdır. Her aralık için yalnız şu producer kullanılır:
+
+```bash
+python3 -m test range-run --producer claude --from 1 --to 15
+```
+
+Sonraki aralıklarda `--from/--to` yukarıdaki sıraya göre değiştirilir. Tam 15 family accepted
+olmadan shard pushlanmaz. Rejected/eksik slot varsa aynı komut yeniden çalıştırılır; accepted
+slotlar korunur ve yalnız eksikler refill edilir. Her tamamlanan aralıktan sonra ilgili
+`claude_XXX_YYY.jsonl` + manifest çifti commit edilip `main` branch'ine pushlanır. Push başarılı
+olmadan sonraki aralığa geçilmez.
+
+Claude yalnız generator'dır. Deterministic QC, DeepSeek semantic judge ve GLM morphology judge
+mevcut pipeline tarafından aynen uygulanır. İnsan review, toplam `Codex=300 + Claude=300 = 600`
+accepted family tamamlandıktan sonra ayrıca başlatılır. `.env` repo kökünden otomatik okunur;
+`.env`, `test/runs/`, cache ve SQLite Git'e eklenmez.
+
 Üreticiler aynı anda çalıştırılmamalıdır. Her batch tamamlanıp pushlandıktan sonra sıradaki kişi
 `git pull --ff-only` ile başlamalıdır. Kod her üreticinin kendi 1–300 sırasındaki boşluk ve
 çakışmaları engeller; Git üzerinde sırayla çalışma ise iki farklı makinenin aynı eski memory

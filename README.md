@@ -63,6 +63,10 @@ Generator'lar Codex ve Claude abonelik CLI'larını, bağımsız judge'lar OpenR
 Model kimlikleri, prompt/config sürümü, request hash'leri, token kullanımı ve git commit'i run
 manifestinde tutulur.
 
+Mevcut ilk 300 Codex family'sinden sonra Claude üretimi kendi `1–300` sırasını 15-family
+shard'larla tamamlar; her shard QC + iki judge sonrasında ayrı commit/push edilir. Ayrıntılı ortak
+üretim akışı: [`test/COLLABORATIVE_GENERATION.md`](test/COLLABORATIVE_GENERATION.md).
+
 Legacy train sistemi için önce `cd train`, ardından [`train/README.md`](train/README.md) içindeki
 komutları kullanın.
 
