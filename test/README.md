@@ -426,8 +426,8 @@ aynı nihai pipeline'ı kullanır. Generator çağrıları aynı modele ait üç
 structured-output isteğinde üretir; deterministic QC, iki bağımsız judge, sorunlu slot onarımı ve
 SQLite kaydı family bazında kalır. Yeni veriler yalnız
 `runs/<run-id>/` altındaki plan, SQLite registry, accepted/rejected kayıtları ve provider
-provenance'ı üzerinden ilerler. Küçük notebook resmî shard'ların ilk beş family'sini kullanır;
-ayrı bir eski pilot JSON tutulmaz. Paper release final insan kontrolü ve freeze sonrasında çıkar.
+provenance'ı üzerinden ilerler. Ayrı bir eski pilot JSON veya pilot notebook tutulmaz. Paper
+release final insan kontrolü ve freeze sonrasında çıkar.
 
 ## Ana dosyalar
 
@@ -446,7 +446,6 @@ ayrı bir eski pilot JSON tutulmaz. Paper release final insan kontrolü ve freez
 | `exports.py` | Freeze, blind/internal JSON, BEIR ve qrels |
 | `morphology.py` | Opsiyonel Stanza audit'i |
 | `evaluation.py` | Metrikler, baseline, ablation ve istatistik |
-| `notebooks/morph_baseline_eval_pilot5_colab.ipynb` | Resmî shard'lardan beş-family / 55-belge hızlı test |
 | `notebooks/morph_baseline_eval_300_colab.ipynb` | İlk 300 Codex family'sinin tamamını test olarak kullanan midpoint değerlendirmesi |
 | `notebooks/morph_baseline_eval_600_colab.ipynb` | 100 dev + 500 final paper değerlendirmesi |
 

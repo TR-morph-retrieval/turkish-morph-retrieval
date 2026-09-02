@@ -67,9 +67,8 @@ Bu öncelik koşullarını taşıyan kabul edilmiş family'ler
 
 Eski ayrı preview üretim kodu final üretim öncesinde kaldırılmıştır. Pilot ve ana üretim aynı
 nihai pipeline'ı kullanır; ilk üretim çağrıları üç family'lik batch, bütün QC/judge/refill ve SQLite
-kayıtları family bazındadır. Resmî shard'ların ilk beş family'si
-`notebooks/morph_baseline_eval_pilot5_colab.ipynb` ile hızlıca değerlendirilir; ayrı bir eski pilot
-JSON tutulmaz. 600-family paper notebook'u bundan ayrıdır.
+kayıtları family bazındadır. Ara değerlendirme 300-family notebook'u, nihai değerlendirme ise
+600-family paper notebook'u ile yapılır; ayrı bir eski pilot JSON tutulmaz.
 
 Qrels family oluşturulurken hazırdır:
 
