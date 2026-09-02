@@ -13,7 +13,7 @@ from typing import Any
 from .taxonomy import MORPH_HARD_SUBTYPES, SEMANTIC_HARD_SUBTYPES
 from .validators import _bm25_scores, char_ngrams, jaccard, tokens
 
-EVALUATION_API_VERSION = "3.2"
+EVALUATION_API_VERSION = "3.3"
 CONTROLLED_RECALL_KS = (1, 3)
 FULL_CORPUS_RECALL_KS = (1, 3, 10, 50)
 
@@ -249,8 +249,12 @@ def score_encoder(
                 / len(hard_candidates + easy_candidates)
                 if hard_candidates or easy_candidates else 0.0
             ),
-            "contrast_consistency": float(
-                bool(minimal_candidates) and all(pairwise_win(candidate) == 1.0 for candidate in minimal_candidates)
+            # This slice is defined only for families that contain a strict minimal
+            # morphology negative.  ``None`` keeps all other families out of the
+            # aggregate instead of incorrectly counting them as failures.
+            "contrast_consistency": (
+                float(all(pairwise_win(candidate) == 1.0 for candidate in minimal_candidates))
+                if minimal_candidates else None
             ),
             "positive_score": gold_score,
             "minimal_margin": (
