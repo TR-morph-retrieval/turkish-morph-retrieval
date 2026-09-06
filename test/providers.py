@@ -111,6 +111,7 @@ class OpenRouterProvider:
             "reasoning": self.spec.get("reasoning"),
             "plugins": self.spec.get("plugins", []),
             "pipeline": self.run_metadata,
+            "transport_policy": "length-budget-retry-v1",
         }
         canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), identity
@@ -147,7 +148,6 @@ class OpenRouterProvider:
             body["reasoning"] = self.spec["reasoning"]
         if self.spec.get("plugins"):
             body["plugins"] = self.spec["plugins"]
-        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
@@ -156,8 +156,11 @@ class OpenRouterProvider:
         }
 
         last_error: Exception | None = None
+        attempts = []
+        initial_budget = int(body["max_tokens"])
         for attempt in range(5):
             self.limiter.wait()
+            payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
             req = urllib.request.Request(self.spec["base_url"], data=payload, headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(
@@ -168,6 +171,27 @@ class OpenRouterProvider:
                     raw = json.loads(response.read().decode("utf-8"))
                 choice = raw["choices"][0]
                 content = choice["message"]["content"]
+                attempts.append({
+                    "max_tokens": body["max_tokens"],
+                    "finish_reason": choice.get("finish_reason"),
+                    "content_chars": len(str(content or "")),
+                    "provider": raw.get("provider"),
+                    "model": raw.get("model"),
+                    "usage": raw.get("usage", {}),
+                })
+                # Keep failed response evidence even when no valid judge answer exists.
+                with self._write_lock:
+                    with (self.cache_dir / f"{request_hash}.attempts.jsonl").open("a", encoding="utf-8") as log:
+                        log.write(json.dumps(attempts[-1], ensure_ascii=False) + "\n")
+                if choice.get("finish_reason") == "length":
+                    last_error = ProviderError(
+                        f"Judge token sınırında kesildi: max_tokens={body['max_tokens']}; "
+                        f"provider={raw.get('provider')}; karar kabul edilmedi"
+                    )
+                    if body["max_tokens"] >= initial_budget * 4:
+                        break
+                    body["max_tokens"] = min(initial_budget * 4, body["max_tokens"] * 2)
+                    continue
                 try:
                     data = _extract_json(content)
                 except ProviderError as exc:
@@ -180,7 +204,9 @@ class OpenRouterProvider:
                 record = {
                     "identity": identity,
                     "data": data,
-                    "usage": raw.get("usage", {}),
+                    "usage": {**raw.get("usage", {}), "transport_attempts": attempts,
+                              "effective_max_tokens": body["max_tokens"],
+                              "transport_policy": "length-budget-retry-v1"},
                     "response_model": raw.get("model", self.model),
                     "route_provider": raw.get("provider"),
                     "created_at_unix": int(time.time()),

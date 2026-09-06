@@ -158,6 +158,14 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
 
     config_sha256 = hashlib.sha256(Path(cfg["_config_path"]).read_bytes()).hexdigest()
     source_hashes = _pipeline_source_hashes()
+    execution_hashes = dict(source_hashes)
+    # A narrowly approved transport fix retains the dataset contract. All actual
+    # execution hashes are recorded separately; arbitrary source changes still fail.
+    compatibility_path = HERE / "transport_compatibility.json"
+    if compatibility_path.exists():
+        compatibility = json.loads(compatibility_path.read_text(encoding="utf-8"))
+        if source_hashes == compatibility["execution_source_sha256"]:
+            source_hashes = compatibility["dataset_source_sha256"]
     manifest = {
         "run_id": run_id,
         "dataset_name": cfg["dataset_name"],
@@ -166,6 +174,7 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         "git_commit_at_start": _git_commit(),
         "prompt_version": PROMPT_VERSION,
         "pipeline_source_sha256": source_hashes,
+        "execution_source_sha256": execution_hashes,
         "config_path": cfg["_config_path"],
         "config_sha256": config_sha256,
         "plan_sha256": current_hash,
@@ -205,12 +214,19 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
             )
     else:
         _write_json(paths.manifest, manifest)
+    if execution_hashes != source_hashes:
+        _write_json(paths.root / "transport_execution.json", {
+            "policy": "length-budget-retry-v1", "git_commit": _git_commit(),
+            "dataset_source_sha256": source_hashes,
+            "execution_source_sha256": execution_hashes,
+        })
     DatasetMemory(paths.memory).sync_plan(slots)
     return paths
 
 
 def _request_provenance(response) -> dict[str, Any]:
     return {
+        "execution_source_sha256": _pipeline_source_hashes(),
         "provider": response.provider,
         "model": response.model,
         "request_hash": response.request_hash,

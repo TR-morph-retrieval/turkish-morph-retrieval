@@ -21,6 +21,26 @@ aktarılır. Bilimsel olarak gereksiz olan “önce Codex'in 300'ü bitsin” ki
 
 ## Tek komut
 
+### Judge token sınırında kesilirse
+
+`finish_reason=length` bir judge kararı değildir; JSON tamamlanmış görünse bile kabul edilmez.
+OpenRouter adapter aynı model/prompt ile bütçeyi en fazla iki kez artırır
+(2600 → 5200 → 10400); hâlâ kesiliyorsa başarısız döner. QC eşikleri ve reasoning ayarı korunur.
+Her yanıtın bütçesi, sağlayıcısı, finish_reason ve kullanımı cache içindeki
+`*.attempts.jsonl` kaydında; başarılı isteğin denemeleri family provenance içindeki
+`usage.transport_attempts` alanında tutulur. Buradaki iç kullanım kayıtlarını toplam maliyete
+ikinci kez eklemeyin; dış usage son başarılı yanıtı temsil eder.
+
+`transport_compatibility.json` yalnız bu onaylı kod sürümünün tam hash eşlemesini içerir.
+Eski shard sözleşmesi korunurken gerçek çalıştırma hash'leri yeni family provenance'ında
+ve yerel `transport_execution.json` içinde kaydedilir. Başka kod/config/prompt değişiklikleri
+uyumluluk istisnasından yararlanamaz. Bu, bütün örneklerin aynı token bütçesiyle judge edildiği
+anlamına gelmez; etkin bütçeler provenance'dan raporlanmalıdır.
+
+Claude 136–150 tamamlanmamışsa arkadaşınız güncel kodu pull ettikten sonra aynı
+`range-run --producer claude --from 136 --to 150` komutunu çalıştırmalıdır.
+Yerelde accepted olan kayıtlar korunur; eksikler tamamlanmadan shard yayınlanmaz.
+
 ```bash
 git pull --ff-only
 python3 -m test self-test
