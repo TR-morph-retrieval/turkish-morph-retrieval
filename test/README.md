@@ -52,6 +52,24 @@ Generalizasyon dağılımı:
 - `%20 composition_holdout`
 - Yaklaşık `%20` ek `domain_shift` etiketi
 
+### Kompozisyonel generalizasyon holdout'u
+
+Bu, benchmark'ın korunacak tasarım değişmezidir. `100 development + 500 sealed_test`
+planı kullanıldığında 18 ek-zinciri fenomeninin yalnızca `NEG.AOR`, `PLUPRF`,
+`PST.PROG` ve `FUT.PST` üyeleri development chain slotlarına atanabilir. Diğer 14
+zincir — `CNTR`, `NMLZ.DIK`, `REL.GEN.POSS`, `PL.POSS.CASE`, `CAUS.PASS.NEG`,
+`EVID.COND.NEG`, `NMLZ.CASE.CNTR`, `TENSE.PERS.NEG`, `EVID.POSS.NEG`,
+`RECP.CAUS`, `POSS.PL.ABL`, `DERIV.IG_CHAIN`, `SUSP.AFFIX` ve `MWE.MORPH` —
+development'ta **0** kez görünür; composition-holdout test slotlarına (planlanan
+dağılımda zincir başına yaklaşık 13--14 örnek) ayrılır.
+
+Dolayısıyla bu alt kümedeki değerlendirme, development sırasında görülmemiş **tam
+ek-zincirleri** üzerinde zero-shot compositional generalization ölçer. Bu iddia
+yalnız `generalization_bucket=composition_holdout` alt kümesi için raporlanmalı;
+holdout zincirleri development, train veya haricî memory girdilerinde görülürse
+üretim reddedilmelidir. `planner.py`, `exports.py` ve dataset-memory kontrolleri
+bu ayrımı doğrular; bu listeyi veya kuralı veri üretimi sırasında değiştirmeyin.
+
 Çoklu generator'lar run'a özel SQLite dataset memory üzerinden koordine edilir. Registry atomik
 slot rezervasyonu, kabul edilen morfoloji/semantik metadata'sı ve aggregate coverage tutar. Prompt
 yalnız sayımları ve tekrar edilmemesi gereken lemma/anlatı etiketlerini görür; eski test cümleleri
