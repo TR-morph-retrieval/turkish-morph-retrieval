@@ -34,7 +34,7 @@
     "raw_00296_ab29360595",
     "raw_00299_a66bf359f6"
   ],
-  "shard_sha256": "a3d69e37109dde1253bf262c8fa414eb2bccafa30517e49a2479c23f1466a4e3",
+  "shard_sha256": "0267f3571410eb92e0bc1f72be73b92edd5583c2acbe65f454e4c0c6ce2d6922",
   "run_contract": {
     "dataset_version": "3.9.0",
     "prompt_version": "test-prompts-3.9.6-glm53-possessive-calibration",
@@ -110,5 +110,6 @@
       "stage": "final_freeze_only"
     }
   },
-  "run_contract_sha256": "16acdac568d190c641bc93e44b011274cf28612f1aa7e1f0bd9a0e3131198819"
+  "run_contract_sha256": "16acdac568d190c641bc93e44b011274cf28612f1aa7e1f0bd9a0e3131198819",
+  "postprocessing": {"operation": "reassign_development_to_sealed_test", "source_shard_sha256": "a3d69e37109dde1253bf262c8fa414eb2bccafa30517e49a2479c23f1466a4e3", "generation_contract_preserved": true}
 }

@@ -5,14 +5,13 @@ araştırma projesi. Repo artık veri yaşam döngüsünü iki bağımsız parç
 
 | Dizin | Amaç |
 |---|---|
-| [`train/`](train/) | Eski Gemini train/dev generator'ı, model-selection araçları ve v2.0–v2.2 JSON geçmişi. Bu bölüm korunmuş legacy sistemdir. |
+| [`train/`](train/) | Bağımsız Gemini 3.8 Flash + iki judge; kota planı, test dışlama kontrolleri, SQLite resume ve JSONL export. Üretim insan kontrolü tamamlanmış test sürümünün onayını gerektirir. |
 | [`test/`](test/) | 100 development + 500 final test; iki generator, bağımsız LLM judge, otomatik QC/qrels/freeze. |
 | [`test/notebooks/morph_baseline_eval_300_colab.ipynb`](test/notebooks/morph_baseline_eval_300_colab.ipynb) | İlk 300 Codex family'sinin tamamını test olarak kullanan grafik destekli ara değerlendirme. |
 | [`test/notebooks/morph_baseline_eval_600_colab.ipynb`](test/notebooks/morph_baseline_eval_600_colab.ipynb) | 100 development + 500 final için eksiksiz paper değerlendirmesi. |
 
-Eski 50-family JSON ve önceki veri sürümü
-[`train/legacy_test_data/`](train/legacy_test_data/) altında provenance amacıyla saklanır. Yeni test
-generator'ı bu metinleri few-shot olarak kullanmaz.
+Eski train üreticisi, deneme verileri ve notebook'ları kaldırıldı; Git geçmişinden bulunabilir.
+Train ve test ayrı kod/config/veri yaşam döngüleridir.
 
 ## Yeni test kararı
 
@@ -66,8 +65,7 @@ Mevcut ilk 300 Codex family'sinden sonra Claude üretimi kendi `1–300` sıras�
 shard'larla tamamlar; her shard QC + iki judge sonrasında ayrı commit/push edilir. Ayrıntılı ortak
 üretim akışı: [`test/COLLABORATIVE_GENERATION.md`](test/COLLABORATIVE_GENERATION.md).
 
-Legacy train sistemi için önce `cd train`, ardından [`train/README.md`](train/README.md) içindeki
-komutları kullanın.
+Yeni train hattının durumu ve çevrimdışı kontrol komutları: [`train/README.md`](train/README.md).
 
 ## Paper değerlendirme katmanları
 

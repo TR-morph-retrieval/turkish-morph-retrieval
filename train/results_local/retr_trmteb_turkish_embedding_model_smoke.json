@@ -1,1 +1,0 @@
-[{"model": "trmteb-pretrain", "role": "finished", "dataset": "scifact-tr", "nDCG@10": 62.07, "MRR@10": 59.9, "Recall@10": 68.75, "Recall@100": 100.0, "encode_sec": 49.3}]

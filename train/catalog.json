@@ -1,0 +1,1052 @@
+{
+  "version": "train-taxonomy-v1",
+  "features": [
+    {
+      "key": "NEG",
+      "label": "olumsuzluk",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "eylemin gerçekleşmesi ↔ gerçekleşmemesi",
+      "surface_forms": [
+        "-ma",
+        "-me"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "COP.NEG",
+      "label": "isim cümlesinde olumsuzluk",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "yüklemin özne için geçerli olması ↔ değil ile reddedilmesi",
+      "surface_forms": [
+        "değil",
+        "değildi",
+        "değilmiş",
+        "değilse"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ABIL",
+      "label": "yeterlilik",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "yapabilme ↔ yapamama",
+      "surface_forms": [
+        "-abil",
+        "-ebil"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "NEG.ABIL",
+      "label": "yetersizlik",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "yapamama ↔ yapmama",
+      "surface_forms": [
+        "-ama",
+        "-eme"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CAUS",
+      "label": "ettirgen",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "kendisi yapma ↔ başkasına yaptırma",
+      "surface_forms": [
+        "-dır",
+        "-dir",
+        "-tır",
+        "-tir",
+        "-ir"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PASS",
+      "label": "edilgen",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "öznenin yapması ↔ özneye yapılması",
+      "surface_forms": [
+        "-il",
+        "-ıl",
+        "-in",
+        "-ın",
+        "-n"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "REFL",
+      "label": "dönüşlü",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "başkasına yapma ↔ kendine yapma",
+      "surface_forms": [
+        "-in",
+        "-ın",
+        "-n"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "RECP",
+      "label": "işteş",
+      "macro": "negation_voice_valency",
+      "layer": "single",
+      "meaning_contrast": "tek taraflı ↔ karşılıklı/birlikte",
+      "surface_forms": [
+        "-iş",
+        "-ış",
+        "-uş",
+        "-üş",
+        "-ş"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PST",
+      "label": "görülen geçmiş",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "tanık olunan geçmiş ↔ şimdiki/gelecek",
+      "surface_forms": [
+        "-dı",
+        "-di",
+        "-du",
+        "-dü",
+        "-tı",
+        "-ti",
+        "-tu",
+        "-tü"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PRF.EVID",
+      "label": "duyulan geçmiş/kanıtsallık",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "doğrudan tanıklık ↔ aktarma/çıkarım",
+      "surface_forms": [
+        "-mış",
+        "-miş",
+        "-muş",
+        "-müş"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PRS.PROG",
+      "label": "şimdiki zaman",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "sürmekte olan ↔ tamamlanmış",
+      "surface_forms": [
+        "-ıyor",
+        "-iyor",
+        "-uyor",
+        "-üyor"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "FUT",
+      "label": "gelecek zaman",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "henüz olacak ↔ olmuş",
+      "surface_forms": [
+        "-acak",
+        "-ecek"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "AOR",
+      "label": "geniş zaman",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "alışkanlık/genel doğru ↔ tek olay",
+      "surface_forms": [
+        "-ar",
+        "-er",
+        "-ır",
+        "-ir",
+        "-ur",
+        "-ür"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "NEC",
+      "label": "gereklilik",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "yapması gerekli ↔ yaptığı/istediği",
+      "surface_forms": [
+        "-malı",
+        "-meli"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "OPT",
+      "label": "istek kipi",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "dilek/istek ↔ gerçekleşmiş olay",
+      "surface_forms": [
+        "-a",
+        "-e"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "IMP.3",
+      "label": "üçüncü kişi emir",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "yapması isteniyor ↔ yaptığı bildiriliyor",
+      "surface_forms": [
+        "-sın",
+        "-sin",
+        "-sun",
+        "-sün"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "COND",
+      "label": "koşul",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "koşullu ihtimal ↔ gerçekleşmiş neden-sonuç",
+      "surface_forms": [
+        "-sa",
+        "-se"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PRSM",
+      "label": "tahmin/kesinlik",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "çıkarım/tahmin ↔ doğrudan bilgi",
+      "surface_forms": [
+        "-dır",
+        "-dir",
+        "-dur",
+        "-dür"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "COP.TAM",
+      "label": "ek-fiilde zaman/kanıtsallık/koşul",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "isim yüklemin geçmişte geçerli olması ↔ aktarılması/koşula bağlanması",
+      "surface_forms": [
+        "-ydı",
+        "-ydi",
+        "-ymış",
+        "-ymiş",
+        "-ysa",
+        "-yse",
+        "idi",
+        "imiş",
+        "ise"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "Q.PART.SCOPE",
+      "label": "soru parçacığında odak kapsamı",
+      "macro": "tense_mood_aspect_evidentiality",
+      "layer": "single",
+      "meaning_contrast": "eyleyenin sorgulanması ↔ nesnenin/başka ögenin sorgulanması",
+      "surface_forms": [
+        "mı",
+        "mi",
+        "mu",
+        "mü"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ACC",
+      "label": "belirtme hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "belirli nesne ↔ belirsiz/genel nesne",
+      "surface_forms": [
+        "-ı",
+        "-i",
+        "-u",
+        "-ü"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "DAT",
+      "label": "yönelme hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "hedefe doğru ↔ kaynaktan",
+      "surface_forms": [
+        "-a",
+        "-e",
+        "-ya",
+        "-ye"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "LOC",
+      "label": "bulunma hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "bir yerde bulunma ↔ bir yerden ayrılma",
+      "surface_forms": [
+        "-da",
+        "-de",
+        "-ta",
+        "-te"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ABL",
+      "label": "ayrılma hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "kaynaktan ayrılma ↔ hedefe yönelme",
+      "surface_forms": [
+        "-dan",
+        "-den",
+        "-tan",
+        "-ten"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "INS",
+      "label": "vasıta/birliktelik hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "birlikte/araçla ↔ hedefe",
+      "surface_forms": [
+        "-la",
+        "-le",
+        "-yla",
+        "-yle"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "GEN",
+      "label": "ilgi hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "aitlik/sahiplik ↔ yalın ad",
+      "surface_forms": [
+        "-ın",
+        "-in",
+        "-un",
+        "-ün",
+        "-nın",
+        "-nin"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "EQU",
+      "label": "eşitlik hâli",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "ona göre/o biçimde ↔ başka ölçüt",
+      "surface_forms": [
+        "-ca",
+        "-ce",
+        "-ça",
+        "-çe"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CASE.ROLE.FRAME",
+      "label": "hâl işaretli argüman rolleri",
+      "macro": "case_location_direction",
+      "layer": "single",
+      "meaning_contrast": "aynı katılımcılarla kim, kimi, kime ve kimden rollerinin korunması ↔ rollerin ters/yanlış bağlanması",
+      "surface_forms": [],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PL",
+      "label": "çoğul",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "birden çok ↔ tek",
+      "surface_forms": [
+        "-lar",
+        "-ler"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "V.AGR",
+      "label": "fiilde kişi-sayı uyumu",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "eylemi yapan kişi/sayı ↔ başka kişi/sayı",
+      "surface_forms": [
+        "-m",
+        "-ım",
+        "-im",
+        "-sın",
+        "-sin",
+        "-k",
+        "-ız",
+        "-iz",
+        "-siniz",
+        "-lar",
+        "-ler"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ANAPHOR.AGR",
+      "label": "kendi zamirinde kişi-sayı ve gönderim",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "dönüşlü zamirin doğru kişiye/gruba gönderimi ↔ başka kişi/gruba gönderimi",
+      "surface_forms": [
+        "kendim",
+        "kendin",
+        "kendi",
+        "kendimiz",
+        "kendiniz",
+        "kendileri"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.1SG",
+      "label": "1. tekil iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "benim ↔ başkasının",
+      "surface_forms": [
+        "-ım",
+        "-im",
+        "-um",
+        "-üm",
+        "-m"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.2SG",
+      "label": "2. tekil iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "senin ↔ başkasının",
+      "surface_forms": [
+        "-ın",
+        "-in",
+        "-un",
+        "-ün",
+        "-n"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.3SG",
+      "label": "3. tekil iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "onun ↔ benim/bizim",
+      "surface_forms": [
+        "-ı",
+        "-i",
+        "-u",
+        "-ü",
+        "-sı",
+        "-si"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.1PL",
+      "label": "1. çoğul iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "bizim ↔ tek kişinin",
+      "surface_forms": [
+        "-ımız",
+        "-imiz",
+        "-umuz",
+        "-ümüz"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.2PL",
+      "label": "2. çoğul iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "sizin ↔ senin",
+      "surface_forms": [
+        "-ınız",
+        "-iniz",
+        "-unuz",
+        "-ünüz"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "POSS.3PL",
+      "label": "3. çoğul iyelik",
+      "macro": "possession_person_number",
+      "layer": "single",
+      "meaning_contrast": "onların ↔ onun",
+      "surface_forms": [
+        "-ları",
+        "-leri"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.WHEN",
+      "label": "-ince ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "olay gerçekleşince ↔ olaydan bağımsız",
+      "surface_forms": [
+        "-ınca",
+        "-ince",
+        "-unca",
+        "-ünce"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.BY",
+      "label": "-erek ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "o yolla yaparak ↔ başka yolla",
+      "surface_forms": [
+        "-arak",
+        "-erek"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.AND",
+      "label": "-ip ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "ardışık iki olay ↔ yalnız biri",
+      "surface_forms": [
+        "-ıp",
+        "-ip",
+        "-up",
+        "-üp"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.WITHOUT",
+      "label": "-meden ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "yapmadan ↔ yaptıktan sonra",
+      "surface_forms": [
+        "-madan",
+        "-meden"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.ASLONG",
+      "label": "-dikçe ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "sürdükçe/orantılı ↔ tek sefer",
+      "surface_forms": [
+        "-dıkça",
+        "-dikçe",
+        "-dukça",
+        "-dükçe"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "CVB.WHILE",
+      "label": "-ken ulacı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "eşzamanlı ↔ önce/sonra",
+      "surface_forms": [
+        "-ken"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "NMLZ.MEK",
+      "label": "-mek adlaştırması",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "eylemin kendisi ↔ gerçekleşmiş olay",
+      "surface_forms": [
+        "-mak",
+        "-mek"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "NMLZ.MA_VS_DIK",
+      "label": "-mA ve -DIK adlaştırma karşıtlığı",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "istenen/planlanan olay ↔ gerçekleşmiş olgu bilgisi",
+      "surface_forms": [
+        "-ma",
+        "-me",
+        "-dığı",
+        "-diği",
+        "-duğu",
+        "-düğü"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PTCP.SUBJ",
+      "label": "özne sıfat-fiili",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "eylemi yapan ↔ maruz kalan",
+      "surface_forms": [
+        "-an",
+        "-en"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PTCP.FUT",
+      "label": "gelecek sıfat-fiili",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "yapılacak ↔ yapılmış",
+      "surface_forms": [
+        "-acak",
+        "-ecek"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PRIV",
+      "label": "yoksunluk",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "bir şeyden yoksun ↔ onu içeren",
+      "surface_forms": [
+        "-sız",
+        "-siz",
+        "-suz",
+        "-süz"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "PROP",
+      "label": "varlık/bulunma",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "bir şeyi içeren ↔ ondan yoksun",
+      "surface_forms": [
+        "-lı",
+        "-li",
+        "-lu",
+        "-lü"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "REL.KI",
+      "label": "aitlik -ki",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "belirtilen yere/zamana ait ↔ başka yere ait",
+      "surface_forms": [
+        "-ki"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "AGT",
+      "label": "meslek/uğraş",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "işi yapan kişi ↔ işin kendisi",
+      "surface_forms": [
+        "-cı",
+        "-ci",
+        "-cu",
+        "-cü",
+        "-çı",
+        "-çi"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ABST",
+      "label": "soyutlama",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "soyut görev/nitelik ↔ somut varlık",
+      "surface_forms": [
+        "-lık",
+        "-lik",
+        "-luk",
+        "-lük"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "DISTR",
+      "label": "üleştirme",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "her birine ayrı ayrı ↔ toplam",
+      "surface_forms": [
+        "-ar",
+        "-er",
+        "-şar",
+        "-şer"
+      ],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "MORPH.CONTEXT_AMBIG",
+      "label": "bağlamsal morfolojik belirsizlik",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "aynı yüzey biçiminin bağlamda doğru lemma/sözcük türü/çekim analizi ↔ bağlama uymayan alternatif analizi",
+      "surface_forms": [],
+      "objective": "morpheme_sensitivity"
+    },
+    {
+      "key": "ALLO.LOC",
+      "label": "bulunma hâli allomorfları",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "aynı bulunma işlevi, farklı uyum/ötümsüzleşme",
+      "surface_forms": [
+        "-da",
+        "-de",
+        "-ta",
+        "-te"
+      ],
+      "objective": "allomorph_invariance"
+    },
+    {
+      "key": "ALLO.ABL",
+      "label": "ayrılma hâli allomorfları",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "aynı ayrılma işlevi, farklı uyum/ötümsüzleşme",
+      "surface_forms": [
+        "-dan",
+        "-den",
+        "-tan",
+        "-ten"
+      ],
+      "objective": "allomorph_invariance"
+    },
+    {
+      "key": "ALLO.DAT",
+      "label": "yönelme kaynaştırma allomorfları",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "aynı yönelme işlevi, kaynaştırmalı yüzey",
+      "surface_forms": [
+        "-a",
+        "-e",
+        "-ya",
+        "-ye"
+      ],
+      "objective": "allomorph_invariance"
+    },
+    {
+      "key": "ALLO.ACC",
+      "label": "belirtme hâli allomorfları",
+      "macro": "derivation_nonfinite_allomorphy",
+      "layer": "single",
+      "meaning_contrast": "aynı belirtme işlevi, ünlü uyumlu yüzey",
+      "surface_forms": [
+        "-ı",
+        "-i",
+        "-u",
+        "-ü",
+        "-yı",
+        "-yi"
+      ],
+      "objective": "allomorph_invariance"
+    },
+    {
+      "key": "NEG.AOR",
+      "label": "geniş zaman + olumsuzluk",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "genel olumsuz alışkanlık ↔ anlık olumsuzluk",
+      "surface_forms": [
+        "-maz",
+        "-mez"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "PLUPRF",
+      "label": "kanıtsal geçmiş + geçmiş",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "daha önce tamamlanmış ↔ o sırada sürüyor",
+      "surface_forms": [
+        "-mıştı",
+        "-mişti"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "PST.PROG",
+      "label": "şimdiki + geçmiş",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "geçmişte sürüyordu ↔ daha önce bitmişti",
+      "surface_forms": [
+        "-ıyordu",
+        "-iyordu"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "FUT.PST",
+      "label": "gelecek + geçmiş",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "gerçekleşmemiş niyet ↔ gerçekleşmiş olay",
+      "surface_forms": [
+        "-acaktı",
+        "-ecekti"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "CNTR",
+      "label": "karşı-olgusal koşul",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "olmadı ama olsaydı ↔ gerçekten oldu",
+      "surface_forms": [
+        "-saydı",
+        "-seydi"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "NMLZ.DIK",
+      "label": "adlaştırma + iyelik",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "gerçekleşmiş eylem bilgisi ↔ gelecek eylem",
+      "surface_forms": [
+        "-dığı",
+        "-diği",
+        "-duğu",
+        "-düğü"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "REL.GEN.POSS",
+      "label": "-DIK sıfat-fiilinde genitif–iyelik uyumu",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "yan cümle öznesi ile sıfat-fiil iyeliğinin aynı kişi/sayıya bağlanması ↔ başka possessor/gönderim",
+      "surface_forms": [
+        "-ın",
+        "-in",
+        "-un",
+        "-ün",
+        "-dığı",
+        "-diği",
+        "-dığım",
+        "-diğim"
+      ],
+      "objective": "composition"
+    },
+    {
+      "key": "PL.POSS.CASE",
+      "label": "çoğul + iyelik + hâl",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "kaç tane, kimin ve yön/konum birlikte",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "CAUS.PASS.NEG",
+      "label": "ettirgen + edilgen + olumsuzluk",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "yaptıran, maruz kalan ve olumsuzluk kapsamı",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "EVID.COND.NEG",
+      "label": "kanıtsallık + koşul + olumsuzluk",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "bilgi kaynağı, ihtimal ve kutupluluk",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "NMLZ.CASE.CNTR",
+      "label": "adlaştırma + hâl + karşı-olgusal",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "adlaştırılmış olayın hâli ve gerçekliği",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "TENSE.PERS.NEG",
+      "label": "zaman + kişi + olumsuzluk",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "kim, ne zaman ve gerçekleşip gerçekleşmediği",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "EVID.POSS.NEG",
+      "label": "kanıtsallık + iyelik + olumsuzluk",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "kimin bilgisi, kaynağı ve kutupluluğu",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "RECP.CAUS",
+      "label": "işteş + ettirgen",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "karşılıklı yapma ↔ karşılıklı yaptırma",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "POSS.PL.ABL",
+      "label": "iyelik + çoğul + ayrılma",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "kimin kaç tanesinden ayrılma",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "DERIV.IG_CHAIN",
+      "label": "türetim sınırları ve IG zinciri",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "kök sözcük türü, türetim adımları ve son sözcük türünün korunması ↔ farklı türetim yolu veya sınırı",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "SUSP.AFFIX",
+      "label": "koordinasyonda askıda ekleme",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "son eşlenikteki çekimin koordineli ögelere doğru yayılması ↔ yalnız son ögeye bağlanması veya rollerin değişmesi",
+      "surface_forms": [],
+      "objective": "composition"
+    },
+    {
+      "key": "MWE.MORPH",
+      "label": "çok sözcüklü ifadede morfoloji",
+      "macro": "suffix_chain_composition",
+      "layer": "chain",
+      "meaning_contrast": "destek fiilli/kalıplaşmış/tekrarlı yapının morfolojik ve bütüncül anlamının korunması ↔ yalnız yüzey parçalarının eşleşmesi",
+      "surface_forms": [],
+      "objective": "composition"
+    }
+  ],
+  "domains": [
+    "daily_life",
+    "health",
+    "education",
+    "finance",
+    "law_public_services",
+    "travel",
+    "workplace",
+    "ecommerce",
+    "news",
+    "culture_technology"
+  ],
+  "templates": [
+    {
+      "id": "event_report",
+      "description": "doğal bir olay/durum bildirimi"
+    },
+    {
+      "id": "personal_recollection",
+      "description": "birinci kişi gündelik hatırlama"
+    },
+    {
+      "id": "reported_speech",
+      "description": "başkasından aktarılan bilgi"
+    },
+    {
+      "id": "relative_clause",
+      "description": "sıfat-fiilli yan cümle"
+    },
+    {
+      "id": "temporal_subordinate",
+      "description": "zaman ilişkili yan cümle"
+    },
+    {
+      "id": "causal_explanation",
+      "description": "neden-sonuç açıklaması"
+    },
+    {
+      "id": "conditional_scenario",
+      "description": "koşullu veya karşı-olgusal senaryo"
+    },
+    {
+      "id": "formal_record",
+      "description": "kurumsal kayıt/rapor anlatımı"
+    },
+    {
+      "id": "coordinated_events",
+      "description": "iki bağlantılı olayın koordinasyonu"
+    },
+    {
+      "id": "contrastive_statement",
+      "description": "iki olasılığı karşılaştıran bildirim"
+    }
+  ]
+}

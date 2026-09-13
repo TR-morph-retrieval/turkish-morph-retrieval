@@ -99,8 +99,8 @@ def validate_config(cfg: dict[str, Any], runtime: bool = False) -> None:
     if sum(counts.values()) != 11:
         raise ConfigError("Her family tam olarak 11 aday içermeli")
     targets = cfg["targets"]
-    if targets["development"] != 100 or targets["sealed_test"] != 500:
-        raise ConfigError("Dondurulmuş plan 100 development + 500 sealed test olmalı")
+    if (targets.get("development"), targets.get("sealed_test")) not in {(100, 500), (0, 600)}:
+        raise ConfigError("Dondurulmuş plan 600 slot olmalı (600 sealed veya 100 dev + 500 sealed)")
     if "oversample_factor" in targets:
         raise ConfigError("Statik oversampling kaldırıldı; plan doğrudan 600 slot olmalı")
     _check_distribution("query_sentence_distribution", cfg["query_sentence_distribution"])

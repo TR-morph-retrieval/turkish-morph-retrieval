@@ -8,16 +8,8 @@
 __pycache__/
 *.pyc
 
-# Dataset generation: regeneratable response cache and local run state.
-# The finished train/dev sets, generation_report.md, and rejected.jsonl are NOT excluded —
-# those are the deliverables. The cache is ~2000 raw API responses kept only so an interrupted
-# run can resume without re-spending quota; it has no value once a run has finished.
-train/data_morph_v2/_cache/
-train/data_morph_v2/_usage.json
-train/data_morph_v2/run_v*.log
-
-# Stray manual duplicates (e.g. Finder "... copy" files)
-train/data_morph_v2/*copy*
+# Independent train runtime state (not the shared test state).
+train/runs/
 
 # New test generation/review state. It contains blinded reviewer work and private sealed qrels.
 test/runs/

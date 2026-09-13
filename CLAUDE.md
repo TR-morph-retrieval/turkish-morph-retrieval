@@ -10,7 +10,7 @@ Bu repo Türkçe morphology-aware retrieval projesidir. Yeni çalışma iki net 
 
 ## Test invariants
 
-- 100 development + 500 sealed final family.
+- 600 sealed final family (validation ayrımı sonraya bırakılmıştır).
 - Family başına 1 positive + 8 hard + 2 easy; toplam 11 aday.
 - Query %75/%25 (1/2 cümle); pasaj %30/%30/%30/%10 (1/2/3/4 cümle).
 - Generator ve blind judge farklı OpenRouter model aileleri.

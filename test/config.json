@@ -3,8 +3,8 @@
   "version": "3.9.0",
   "seed": 20260814,
   "targets": {
-    "development": 100,
-    "sealed_test": 500
+    "development": 0,
+    "sealed_test": 600
   },
   "candidate_counts": {
     "positive": 1,
