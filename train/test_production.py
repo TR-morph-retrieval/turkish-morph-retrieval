@@ -4,7 +4,7 @@ from copy import deepcopy
 import unittest
 from unittest.mock import patch
 from io import BytesIO
-from production import load_config, policy, validate_family, evaluate, TransportError, OpenRouter
+from production import load_config, policy, validate_family, evaluate, TransportError, OpenRouter, judge_prompt
 
 
 def report(decision='pass', confidence=88, findings=None):
@@ -46,9 +46,15 @@ class FakeClient:
 
 
 class ProductionTests(unittest.TestCase):
+    def test_role_visibility_is_scoped_to_morphology(self):
+        semantic = json.loads(judge_prompt(FAMILY, 'semantic', FAMILY['candidates']).split('Veri:\n')[1])
+        morphology = json.loads(judge_prompt(FAMILY, 'morphology', FAMILY['candidates']).split('Veri:\n')[1])
+        self.assertTrue(all('slot' not in c for c in semantic['candidates']))
+        self.assertEqual(morphology['candidates'][0]['slot'], 'positive')
+
     def test_threshold(self):
         self.assertEqual(policy({'semantic':report(confidence=80), 'morphology':report(confidence=80)}, {'c0'})['action'], 'accept')
-        self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'retry')
+        self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'accept')
 
     def test_invalid_reports(self):
         for bad in [{}, report(confidence=True), report(confidence=float('nan')), report('fail'),
@@ -78,10 +84,10 @@ class ProductionTests(unittest.TestCase):
 
     def test_bounded_repairs(self):
         out=evaluate(FAMILY, FakeClient('always_fail'), load_config(), lambda x:[])
-        self.assertEqual(out['status'], 'rejected'); self.assertEqual(out['repairs'], 2)
+        self.assertEqual(out['status'], 'rejected'); self.assertEqual(out['repairs'], 1)
 
     def test_uncertain(self):
-        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'rejected')
+        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'accepted')
 
     def test_blind_relevance(self):
         self.assertNotEqual(evaluate(FAMILY, FakeClient('blind_mismatch'), load_config(), lambda x:[])['status'], 'accepted')

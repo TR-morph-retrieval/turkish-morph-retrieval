@@ -1,5 +1,13 @@
 # Train üretimi: Gemini 3.8 Flash + iki bağımsız judge
 
+Generator ve GLM düşük reasoning ile çalışır; DeepSeek judge reasoning kapalıdır.
+Gemini için ucuz/Flex fiyat tavanı $0.375/M girdi ve $1.875/M çıktıdır;
+uygun endpoint yoksa pahalı standart sağlayıcıya sessiz geçilmez.
+GLM endpoint'i reasoning kapatmayı desteklemez (API 400 döndürür).
+GLM sağlayıcı seçiminde Wafer dışlanır; hız önceliklidir ve fiyat üst sınırı
+$0.15/M girdi, $0.50/M çıktıdır. Negatiflerin ilgisizliği judge hatası sayılmaz;
+bağımsız relevant_ids amaçlanan positive ile ayrıca karşılaştırılır.
+
 Testten bağımsız Python/config/veri hattı. `test` modülleri import edilmez ve test
 dosyalarına yazılmaz. Test JSONL'leri yalnız **yerel dışlama indeksi** için okunur;
 test query/adayları hiçbir generator veya judge promptuna gönderilmez.
@@ -11,7 +19,7 @@ test query/adayları hiçbir generator veya judge promptuna gönderilmez.
 3. **Approve:** insan kontrolünün bittiği test sürümü checksum + isim ile onaylanır.
 4. **Gemini:** bir query, positive, iki morfolojik hard ve bir semantik hard üretir.
 5. **Yerel guard:** schema, metin/kök sızıntısı, uzunluk, soru/bildirim, minimal-pair kontrolü.
-6. **Paralel iki judge:** DeepSeek semantik, GLM morfoloji. Gold/slot etiketleri gizlenir.
+6. **Paralel iki judge:** DeepSeek semantik turda etiketler gizli; GLM morfoloji turunda slot amaçlarını denetler.
 7. **Karar:** kabul / aday düzeltme / aynı kotada yeni family / teknik erteleme.
 8. **SQLite → JSONL:** güvenli devam, provenance, maliyet ve eğitim görünümü.
 
@@ -29,15 +37,46 @@ Kodun çevrimdışı testleri vardır; gerçek model kalitesi/maliyet/süre anca
 | Fenomen | Dışlama sonrası uygun hedefler arasında yaklaşık eşit |
 
 `catalog.json` 76 fenomenin bağımsız, sürümlü train kopyasıdır; test koduyla otomatik
-senkronizasyon/import yoktur. Mevcut test snapshot'ı **18 composition_holdout** hedefini
-dışlar; train'de 58 hedef kalır. Zincirin bileşenleri uygun tekil hedeflerde öğrenilir,
-saklanan tam zincirler train'e alınmaz. Yeni zincir eklemek ayrı bir plan kararıdır.
+senkronizasyon/import yoktur. **Train-v4 kök–zincir birleşimi holdout** kullanır.
+18 kompozisyon hedefinin tamamı farklı köklerle train'de kullanılabilir; 14 zincirin
+tamamen yasaklanması kaldırılmıştır. Katalogdaki 76 hedef plan için kullanılabilir;
+slotların %30'u kompozisyon, %70'i diğer hedeflerdir (küçük pilotlarda yuvarlama).
+Korunan aynı kritik kök + aynı zincir hedefi birleşimi yasaktır. Aynı kökün başka
+zincir/hedefte, aynı zincirin başka kökte kullanılması serbesttir; ayrı lemma-holdout
+kökleri ve metin/kopya kontrolleri korunur. Yerel filtre kritik lemma ve yüzey-kök
+heuristiğiyle, morfoloji judge'ı tüm metin üzerinden çiftleri denetler. Ek metadata'sı
+olmayan adaylar korunan family'nin zincir hedefi altında muhafazakâr biçimde indekslenir;
+bu tam morfolojik çözümleme veya tüm yüzey varyantları için eksiksiz koruma değildir.
+Eski snapshot/planlar yeni politikayla devam ettirilmez; yeniden prepare gerekir.
+Ham test metinleri LLM'lere gönderilmez. Snapshot hazırlama ve kaynak checksum kontrolü
+yerelde test dosyalarını okur; bu, tamamen test dosyasına erişimsiz bir hat değildir.
+Bu değişiklik sealed test dosyalarını/split'lerini değiştirmez; eski composition_holdout
+etiketleri tarihsel plan metadata'sıdır. Bu train ile görülen zincirler için paper'da
+"unseen-chain zero-shot" iddiası kurulmaz. Kök–zincir grupları ayrıca doğrulanıp raporlanır.
 Kota train'e aittir; testin aday sayısı veya split'i bu kod tarafından değiştirilmez.
 Şu an bu hat ayrı validation üretmez. Yalnız açıkça development olarak ayrılmış veriyle
 ayar yapılmalıdır; bütün 600 sealed ise eğitim deneyinden önce ayrıca bağımsız validation
 planlanmalıdır. Sealed örneklerle hiperparametre seçilmez.
 
 ## Komutlar (repo kökünden)
+
+İnsan kontrolü bitmeden maliyet/süre denemesi için `prepare --pilot` kullanılabilir.
+Sızıntı filtreleri ve iki judge değişmez; insan onayı uydurulmaz. Manifest ve export
+`purpose=pilot_only`, `eligible_for_final_train=false` taşır. Pilot çıktısı final
+train'e eklenmez; final üretim için onaylı kaynakla ayrı run gerekir.
+
+### Güncel pilot ölçümü (18 Eylül 2026)
+
+`runs/pilot5_v4/` tek güncel pilot klasörüdür: SQLite/cache, koruma kaydı, plan ve
+manifest; `accepted.jsonl` beş otomatik kabul; `report.json` durum raporu;
+`measurement.json` model/token/ücret ve süre ölçümü; `pilot.html` okunabilir örnekler.
+Beş kabul için toplam 208,49 saniye / $0,050287 harcandı; düzeltmeler ve iki
+tükenen slotun maliyeti dahildir. Gemini 3.8 Flash çağrılarının tamamı Flex idi.
+Bu küçük pilotun doğrusal 1.000-kabul tahmini yaklaşık $10,06 ve sıralı 11,58 saattir;
+fiyat/sağlayıcı/ret oranına bağlıdır, garanti veya kalite onayı değildir.
+Okumada katılımcı/zaman/yer kaymaları bulundu: otomatik kabul edilmiş bu pilot
+final train'e alınmaz. Büyük üretimden önce positive anlam koruması ve morfolojik
+negatiflerin hedef dışı içerik değişimleri güçlendirilmelidir.
 
 ```bash
 # API yok: mevcut 600'den taslak plan çıkarır, hiçbir insan onayı uydurmaz.
@@ -67,10 +106,28 @@ approve kaydı sorumlu kişinin açık beyanıdır.
 
 ## Judge politikası
 
-- İkisi de **pass, confidence ≥80** → kabul.
+### Train-v5 kalite kuralları
+
+Üretim sırası query → anlamı koruyan positive → positive'dan iki morfolojik karşıt
+→ ayrı içerik negatifi şeklindedir. Query–positive kopyası yerel filtreyle engellenir.
+Positive ve iki morph-hard aynı nötr bağlam cümlelerini kullanır; yerel filtre bağlam
+değişimini reddeder. Strict modda positive–morph_1 aynı lemma ve kritik sözcük dışında
+aynı normalize cümle şablonunu kullanır. Diğer modlarda ifade çeşitliliği korunur.
+Bu kontroller zaman/katılımcı/anlam eşdeğerliğini tek başına kanıtlamaz.
+
+Semantik judge etiketleri görmeden ilgili adayı seçer; Python amaçlanan positive ile
+karşılaştırır. Morfoloji judge slotları görür, fakat bunları doğru kabul etmez: positive
+hedefi, her morph-hard'ın hedef işlev farkını, doğallığını ve hedef dışı içerik değişimini
+denetler. Böylece içerik negatifi ile yanlış üretilmiş morph-hard ayrılır. Bu tur kör
+relevance oylaması değildir. İki judge mevcut çağrılarında bu kontrolleri yapar;
+ek judge veya ek zorunlu API turu eklenmemiştir. Generator low/Flex olarak kalır.
+Eski pilot kalite onayı sayılmaz; yeni kurallar gerçek pilotla ayrıca ölçülmelidir.
+Kod sözleşmesi değiştiğinden eski run sessizce devam etmez, yeni prepare gerekir.
+
+- İkisi de **pass** → kabul; confidence tek başına ret nedeni değildir.
 - Herhangi biri somut adaya bağlı **fail, confidence ≥80** → yalnız ilgili adayı düzelt.
-- Düşük güven, abstain, eksik/çelişkili rapor → sınırlı tekrar, otomatik kabul yok.
-- **En fazla 3 judge turu / 2 düzeltme**, ardından ret.
+- Hata bildiren düşük güvenli karar, abstain, eksik/çelişkili rapor → sınırlı tekrar, otomatik kabul yok.
+- **En fazla 2 judge turu / 1 düzeltme**, ardından ret.
 - Reddedilen family yerine **aynı slotta en fazla 3 generation denemesi**. Sonra `exhausted`;
   raporda görünür, kota doldurulmuş sayılmaz. Sonsuz üretim/harcama döngüsü yoktur.
 - Query/hedef/diğer adaylar patch ile değişmez. Kritik kelime/lemma/cümle metadata'sı
@@ -85,15 +142,20 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
 Korunan 600'ün query ve bütün adayları ile daha önce kabul edilmiş yerel train verileri
 kontrol edilir: normalize exact match, token bigram Jaccard ≥0.65, karakter trigram
 Jaccard ≥0.85 veya token sıra benzerliği ≥0.85. Tam pasaj ve tekil cümleler indekslenir.
-Lemma holdout hem kritik lemma metadata'sında hem konservatif yüzey taramasında aranır
-(4+ karakter kökler için prefix; kısa köklerde exact). Bu tarama gerçek morfolojik
+Hedef-lemma holdout yalnız query/aday kritik lemma metadata'sında ve kritik sözcük
+yüzeyinde aranır (4+ karakter kökler için prefix; kısa köklerde exact). Yan bağlam
+sözcükleri yasak değildir: bu katı corpus-wide lemma-disjointlik iddiası değildir.
+Kök listesi yalnız testin lemma_holdout grubundan alınır. Bu tarama gerçek morfolojik
 çözümleyici değildir; yanlış ret veya kaçırma olabilir. Lemma/şablon/zincirin gerçek
 metindeki kullanımı ayrıca GLM'e denetletilir. IDs'yi farklı yazmak tek başına disjointlik
 kanıtı değildir; tamamen farklı kelimeli anlamsal kopyaları bu filtreler garantiyle yakalamaz.
 **"Sıfır leakage garantisi" iddiası yoktur.**
 
-Kota kontrollü schema/uzunluk/metin ve doğru cümle tipi zorunludur. Strict minimal
-positive–morph_1 aynı lemma, tam bir token değişimi ister. Generator lemma açıklamaları
+Schema, korunan metin/kökler ve doğru kritik cümle tipi zorunludur. Cümle sayısı,
+uzunluk oranı üretim hedefidir, ret filtresi değildir. Strict positive–morph_1 için
+aynı lemma ve hedef sözcük dışındaki aynı şablon yerel filtreyle zorunludur;
+diğer modlarda tek-token edit zorunlu değildir.
+Human-review/uyarı kuyruğu yoktur. Generator lemma açıklamaları
 judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 
 ## Dosyalar / kayıt

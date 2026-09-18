@@ -50,6 +50,51 @@ class Client:
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_morph_context_must_be_shared(self):
+        item = fixture()
+        item['candidates'][0]['text'] = 'İşlem kayda alındı. ' + item['candidates'][0]['text']
+        errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
+        self.assertIn('quality:morph_1:context_changed', errors)
+        self.assertIn('quality:morph_2:context_changed', errors)
+
+    def test_strict_pair_cannot_change_non_target_content(self):
+        item = fixture();candidate = item['candidates'][1]
+        candidate['text'] = candidate['critical_sentence'] = 'Suna dün gölette hiç yüzdü.'
+        self.assertIn('quality:morph_1:strict_non_target_edit',
+                      Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC))
+        loose = {**SPEC, 'family_mode': 'controlled_diverse'}
+        self.assertNotIn('quality:morph_1:strict_non_target_edit',
+                         Guard({'texts': [], 'forbidden_lemmas': []}).check(item, loose))
+
+    def test_positive_cannot_contain_query_sentence(self):
+        protected = {'texts': [], 'forbidden_lemmas': []}
+        item = fixture()
+        item['candidates'][0]['text'] = 'Bugün hava serin. ' + item['query']
+        self.assertIn('quality:query_sentence_copied_into_positive', Guard(protected).check(item, SPEC))
+    def test_chain_partition_and_quotas(self):
+        from production import HERE
+        chains = {f['key'] for f in read_json(HERE/'catalog.json')['features'] if f.get('objective') == 'composition'}
+        protected = {'forbidden_features': sorted(chains), 'forbidden_templates': [],
+                     'forbidden_domain_register': [], 'chain_protection_version': 2,
+                     'chain_forbidden_lemmas': {key: ['korunankök'] for key in chains}}
+        plan = make_plan(protected, 1000, 42)
+        self.assertEqual(sum(s['generalization_policy'] == 'root_chain_holdout' for s in plan), 300)
+        self.assertTrue(chains <= {s['target_feature'] for s in plan})
+        protected.pop('chain_forbidden_lemmas')
+        with self.assertRaises(ValueError):
+            make_plan(protected, 100, 42)
+
+    def test_shared_chain_root_is_blocked(self):
+        protected = {'texts': [], 'forbidden_lemmas': [],
+                     'chain_forbidden_lemmas': {'NEG.AOR': ['yüz']}}
+        self.assertNotIn('leakage:heldout_root_chain_pair', Guard(protected).check(fixture(), SPEC))
+        chain_spec = {**SPEC, 'target_feature': 'NEG.AOR'}
+        item = fixture(); item['target_feature'] = 'NEG.AOR'
+        self.assertIn('leakage:heldout_root_chain_pair', Guard(protected).check(item, chain_spec))
+        for candidate in item['candidates']:
+            candidate['critical_lemma'] = 'başkakök'
+        self.assertNotIn('leakage:heldout_root_chain_pair', Guard(protected).check(item, chain_spec))
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
         self.source=self.root/'source.jsonl';self.folder=self.root/'run'
@@ -120,6 +165,26 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(idx.overlaps('Rana eski depodaki bütün evrakları özenle kutuya yerleştirdi.'))
         self.assertTrue(idx.overlaps('Kayıt tamam!'))
         self.assertFalse(idx.overlaps('Gölette yüzme eğitimi yarın başlıyor.'))
+
+    def test_holdout_allows_incidental_context_not_target(self):
+        p=read_json(self.folder/'protected.json');p['forbidden_lemmas']=['havuz']
+        # All fixture texts contain havuz, but their target words are gir/yüz.
+        self.assertEqual(Guard(p).check(fixture(),SPEC),[])
+        p['forbidden_lemmas']=['yüz']
+        self.assertIn('leakage:heldout_lemma',Guard(p).check(fixture(),SPEC))
+
+    def test_pilot_has_no_final_train_eligibility(self):
+        folder=self.root/'pilot'
+        with patch('workflow.make_plan',return_value=[SPEC]):
+            prepare(folder,self.source,1,42,pilot=True)
+        self.assertFalse(read_json(folder/'manifest.json')['reviewed'])
+        self.assertEqual(generate_run(folder,Client())['accepted'],1)
+        db=Store(folder/'state.sqlite3')
+        try:
+            row=json.loads(Path(export(folder,db)).read_text())
+            self.assertEqual(row['purpose'],'pilot_only')
+            self.assertFalse(row['eligible_for_final_train'])
+        finally:db.close()
 
     def test_balanced_plan_and_holdout(self):
         p=read_json(self.folder/'protected.json');p['forbidden_features']=['NEG'];p['forbidden_templates']=['formal_record']

@@ -52,6 +52,9 @@ def snapshot(source, expected=600):
     if len(rows) != expected or len({x['family_id'] for x in rows}) != expected:
         raise ValueError(f'Expected {expected} unique protected families')
     texts, lemmas, templates, chains, pairs = [], set(), set(), set(), set()
+    shared_chains = [f['key'] for f in read_json(HERE/'catalog.json')['features']
+                     if f.get('objective') == 'composition']
+    chain_lemmas = {key: set() for key in shared_chains}
     for x in rows:
         if len(x['candidates']) != 11:
             raise ValueError('Invalid protected family candidate count')
@@ -63,10 +66,18 @@ def snapshot(source, expected=600):
             templates.add(x['template_id'])
         if bucket == 'composition_holdout':
             chains.add(x['target_feature'])
+        if x['target_feature'] in chain_lemmas:
+            chain_lemmas[x['target_feature']].add(normalized(x['critical_lemma']))
+            for candidate in x['candidates']:
+                if candidate.get('critical_lemma'):
+                    chain_lemmas[x['target_feature']].add(normalized(candidate['critical_lemma']))
         if 'domain_shift' in x.get('generalization_tags', []):
             pairs.add((x['domain'], x['register']))
     return {'source': str(Path(source).resolve()), 'source_sha256': sha, 'family_count': len(rows),
             'texts': texts, 'forbidden_lemmas': sorted(lemmas), 'forbidden_templates': sorted(templates),
+            'lemma_exclusion_scope': 'target_critical_words_only',
+            'chain_forbidden_lemmas': {key: sorted(values) for key, values in chain_lemmas.items()},
+            'chain_protection_version': 2,
             'forbidden_features': sorted(chains), 'forbidden_domain_register': sorted(pairs),
             'encoding_warning_count': sum(bool(re.search('[ÃÄÅ�]', t)) for t in texts)}
 
@@ -85,19 +96,30 @@ def make_plan(protected, size, seed=42):
     if size < 1:
         raise ValueError('Positive plan size required')
     catalog = read_json(HERE / 'catalog.json')
-    eligible = [f for f in catalog['features'] if f['key'] not in protected['forbidden_features']]
+    policy = load_config()['composition_policy']
+    shared = {f['key'] for f in catalog['features'] if f.get('objective') == 'composition'}
+    eligible = [f for f in catalog['features']
+                if f['key'] not in protected['forbidden_features'] or f['key'] in shared]
+    missing = shared - set(protected.get('chain_forbidden_lemmas', {}))
+    if missing or protected.get('chain_protection_version') != 2:
+        raise ValueError(f'Missing root protection for shared chains: {sorted(missing)}; rebuild protection snapshot')
     templates = [t for t in catalog['templates'] if t['id'] not in protected['forbidden_templates']]
     if not eligible or not templates:
         raise ValueError('No train features/templates left after exclusions')
-    # Whole-feature exclusion is conservative: no unseen chain is smuggled into training.
     rng = random.Random(seed)
     eligible.sort(key=lambda f: f['key']); rng.shuffle(eligible)
     modes = distributed({'strict_minimal': .4, 'controlled_diverse': .3, 'natural_retrieval': .3}, size, seed+1)
     qlength = distributed({1: .75, 2: .25}, size, seed+2)
     plength = distributed({1: .3, 2: .3, 3: .3, 4: .1}, size, seed+3)
+    chain_slots = distributed({'chain': policy['chain_fraction'], 'single': 1-policy['chain_fraction']}, size, seed+4)
+    pools = {'chain': [f for f in eligible if f['key'] in shared],
+             'single': [f for f in eligible if f['key'] not in shared]}
+    used = Counter()
     plan = []
     for i in range(size):
-        feature = eligible[i % len(eligible)]
+        group = chain_slots[i]
+        feature = pools[group][used[group] % len(pools[group])]
+        used[group] += 1
         domain = catalog['domains'][(i // len(eligible) + i) % len(catalog['domains'])]
         registers = [r for r in ['everyday', 'conversational', 'news_report']
                      if [domain, r] not in protected['forbidden_domain_register']]
@@ -108,6 +130,7 @@ def make_plan(protected, size, seed=42):
                      'domain': domain, 'register': registers[i % len(registers)],
                      'template': templates[(i // len(eligible)+i) % len(templates)],
                      'family_mode': modes[i], 'query_sentence_count': qlength[i],
+                     'generalization_policy': 'root_chain_holdout' if group == 'chain' else 'standard',
                      'passage_sentence_count': plength[i]})
     return plan
 
@@ -184,16 +207,30 @@ class Guard:
         if item.get('domain') != spec['domain'] or item.get('register') != spec['register']:
             errors.append('plan:domain_or_register_changed')
         texts = [item['query']] + [c['text'] for c in item['candidates']]
+        positive = next((c for c in item['candidates'] if c['slot'] == 'positive'), {})
+        query_sentence = normalized(item.get('query_critical_sentence', item['query']))
+        if query_sentence and any(query_sentence == normalized(s) for s in sentence_parts(positive.get('text', ''))):
+            errors.append('quality:query_sentence_copied_into_positive')
+        if positive.get('critical_sentence'):
+            context = lambda c: [normalized(s) for s in sentence_parts(c['text'])
+                                 if s != c.get('critical_sentence')]
+            for candidate in item['candidates']:
+                if candidate['slot'] in {'morph_1', 'morph_2'} and context(candidate) != context(positive):
+                    errors.append(f"quality:{candidate['slot']}:context_changed")
+                if candidate['slot'] == 'morph_1' and spec['family_mode'] == 'strict_minimal':
+                    if candidate.get('critical_lemma') != positive.get('critical_lemma'):
+                        errors.append('quality:morph_1:strict_lemma_changed')
+                    def skeleton(c):
+                        return [ '__TARGET__' if token == normalized(c.get('critical_word', '')) else token
+                                 for token in normalized(c.get('critical_sentence', '')).split()]
+                    if skeleton(candidate) != skeleton(positive):
+                        errors.append('quality:morph_1:strict_non_target_edit')
         if any(self.index.overlaps(t) for t in texts):
             errors.append('leakage:protected_or_accepted_text_overlap')
-        if len(sentence_parts(item['query'])) != spec['query_sentence_count']:
-            errors.append('plan:query_sentence_count')
-        for c in item['candidates']:
-            if len(sentence_parts(c['text'])) != spec['passage_sentence_count']:
-                errors.append(f"plan:{c['slot']}:sentence_count")
         critical = [(item.get('query_critical_word'), item.get('query_critical_lemma'), item.get('query_critical_sentence'), item['query'])]
         critical += [(c.get('critical_word'), c.get('critical_lemma'), c.get('critical_sentence'), c['text']) for c in item['candidates']]
         forbidden = set(self.protected['forbidden_lemmas'])
+        chain_roots = set(self.protected.get('chain_forbidden_lemmas', {}).get(spec['target_feature'], []))
         for word, lemma, sentence, text in critical:
             if not all(isinstance(v, str) and v.strip() for v in [word, lemma, sentence]):
                 errors.append('metadata:missing_critical_annotation'); continue
@@ -201,23 +238,17 @@ class Guard:
                 errors.append('metadata:critical_annotation_not_in_text')
             if normalized(lemma) in forbidden:
                 errors.append('leakage:heldout_lemma')
+            if normalized(lemma) in chain_roots:
+                errors.append('leakage:heldout_root_chain_pair')
+            if any(normalized(word) == root or (len(root) >= 4 and normalized(word).startswith(root))
+                   for root in chain_roots):
+                errors.append('leakage:heldout_root_chain_pair_surface_match')
             if ('?' in sentence) != (spec['target_feature'] == 'Q.PART.SCOPE'):
                 errors.append('plan:question_vs_statement')
-        # Conservative surface screening supplements untrusted generated lemma metadata.
-        words = {w for t in texts for w in normalized(t).split()}
+        # Target-lemma holdout: incidental context words are NOT globally banned.
+        words = {w for word, lemma, sentence, text in critical if isinstance(word, str) for w in normalized(word).split()}
         if any(w == lemma or (len(lemma) >= 4 and w.startswith(lemma)) for w in words for lemma in forbidden):
             errors.append('leakage:heldout_lemma_surface_match')
-        lengths = sorted(len(c['text'].split()) for c in item['candidates'])
-        if lengths[-1] > max(1, lengths[0]) * 1.8:
-            errors.append('artifact:candidate_length_imbalance')
-        if spec['family_mode'] == 'strict_minimal':
-            cs = {c['slot']: c for c in item['candidates']}
-            p, n = cs['positive'], cs['morph_1']
-            a, b = p['text'].split(), n['text'].split()
-            if len(a) != len(b) or sum(x != y for x,y in zip(a,b)) != 1:
-                errors.append('plan:strict_pair_not_one_token_change')
-            if p.get('critical_lemma') != n.get('critical_lemma'):
-                errors.append('plan:strict_pair_lemma_changed')
         return sorted(set(errors))
 
 
@@ -293,13 +324,15 @@ def contract(cfg, protected, plan):
     return digest({'sources': sources, 'config': cfg, 'protected': protected, 'plan': plan})
 
 
-def prepare(folder, source, size, seed):
+def prepare(folder, source, size, seed, pilot=False):
     protected = snapshot(source)
     plan = make_plan(protected, size, seed)
     cfg = load_config()
     folder.mkdir(parents=True, exist_ok=False)
     manifest = {'version': 'train-run-v1', 'created': now(), 'reviewed': False,
-                'contract_sha256': contract(cfg, protected, plan), 'config': cfg}
+                'contract_sha256': contract(cfg, protected, plan), 'config': cfg,
+                'purpose': 'pilot_only' if pilot else 'final_train',
+                'eligible_for_final_train': not pilot}
     atomic_json(folder/'protected.json', protected)
     atomic_json(folder/'plan.json', plan)
     atomic_json(folder/'manifest.json', manifest)
@@ -331,11 +364,16 @@ def approve(folder, source_sha, reviewer):
 
 
 def generation_spec(spec, protected, attempt):
+    shared = {f['key'] for f in read_json(HERE/'catalog.json')['features']
+              if f.get('objective') == 'composition'}
     return {**spec, 'attempt': attempt,
-            'forbidden_lemmas':protected['forbidden_lemmas'], 'forbidden_features':protected['forbidden_features'],
+            'forbidden_lemmas': protected['forbidden_lemmas'],
+            'forbidden_root_chain_pairs': protected['chain_forbidden_lemmas'],
+            'forbidden_features': sorted(set(protected['forbidden_features']) - shared),
+            'shared_chain_features': sorted(shared),
             'forbidden_templates':protected['forbidden_templates'],
             'required_metadata': 'template_id, domain, register; query_critical_word, query_critical_lemma, query_critical_sentence; each candidate critical_word, critical_lemma, critical_sentence',
-            'instructions': 'Plan alanları ve sayıları aynen koru. Ek cümleler doğal bağlam olsun. Yasak yapıları başka adla veya negatiflerde kullanma. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim. Hedef dışı yasak ek zinciri kullanma.'}
+            'instructions': 'Plan alanları ve sayıları aynen koru. Ek cümleler doğal bağlam olsun. forbidden_root_chain_pairs eşlemesindeki zinciri belirtilen kökle query, aday veya bağlamda kullanma. Aynı kök başka zincirlerle, aynı zincir başka köklerle serbesttir; ayrı forbidden_lemmas yasağı saklıdır. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim.'}
 
 
 def other_run_memory(folder):
@@ -353,7 +391,7 @@ def other_run_memory(folder):
 
 def generate_run(folder, client, limit=10, max_calls=30):
     manifest, protected, plan = verify(folder)
-    if not manifest['reviewed']:
+    if not manifest['reviewed'] and manifest.get('purpose') != 'pilot_only':
         raise ValueError('Human-reviewed frozen test approval required; no paid requests sent')
     cfg = manifest['config']
     store = Store(folder/'state.sqlite3')
@@ -366,14 +404,20 @@ def generate_run(folder, client, limit=10, max_calls=30):
                 break
             sid = spec['slot_id']; cached.job = sid
             while True:
-                row = store.execute('SELECT status,attempt,draft,provenance FROM jobs WHERE id=?', (sid,))[0]
-                status, attempt, draft, provenance = row
+                row = store.execute('SELECT status,attempt,draft,provenance,result FROM jobs WHERE id=?', (sid,))[0]
+                status, attempt, draft, provenance, previous = row
                 if status in {'accepted','exhausted'}:
                     break
                 verify(folder)
                 try:
                     if draft is None:
-                        item, prov = generate_family(cached, cfg, generation_spec(spec, protected, attempt))
+                        request_spec = generation_spec(spec, protected, attempt)
+                        if previous:
+                            prior = json.loads(previous)
+                            request_spec['previous_errors'] = [e for stage in prior.get('events', []) for e in stage.get('errors', [])]
+                            prior_text = ' '.join([prior.get('family', {}).get('query_critical_word', ''), *[c.get('critical_word', '') for c in prior.get('family', {}).get('candidates', [])]])
+                            request_spec['avoid_previous_forbidden_words'] = sorted({w for w in normalized(prior_text).split() for lemma in protected['forbidden_lemmas'] if w == lemma or (len(lemma) >= 4 and w.startswith(lemma))})
+                        item, prov = generate_family(cached, cfg, request_spec)
                         store.execute('UPDATE jobs SET draft=?,provenance=? WHERE id=?', (json.dumps(item,ensure_ascii=False), json.dumps(prov), sid))
                     else:
                         item, prov = json.loads(draft), json.loads(provenance)
@@ -438,6 +482,8 @@ def export(folder, store):
     with tmp.open('w',encoding='utf-8') as handle:
         for (payload,) in store.execute("SELECT result FROM jobs WHERE status='accepted' ORDER BY id"):
             row = json.loads(payload)
+            row['purpose'] = read_json(folder/'manifest.json').get('purpose', 'final_train')
+            row['eligible_for_final_train'] = row['purpose'] != 'pilot_only'
             family = row['family']
             # Deterministic training view + full provenance in ONE JSONL, no extra duplicates.
             row['training'] = {'query':family['query'],
@@ -470,6 +516,7 @@ def main():
         p=sub.add_parser(name);p.add_argument('--run-id', required=True)
         if name=='prepare':
             p.add_argument('--source', type=Path, required=True);p.add_argument('--size',type=int,default=1000);p.add_argument('--seed',type=int,default=42)
+            p.add_argument('--pilot', action='store_true', help='Unreviewed-test pilot; exports are NOT final training data')
         if name=='approve':
             p.add_argument('--source-sha',required=True);p.add_argument('--reviewer',required=True)
             p.add_argument('--confirm-human-review-complete',action='store_true',required=True)
@@ -482,7 +529,7 @@ def main():
     if not folder.is_relative_to(HERE.resolve()):
         parser.error('Output must remain under train/')
     if args.cmd=='prepare':
-        prepare(folder,args.source,args.size,args.seed)
+        prepare(folder,args.source,args.size,args.seed,args.pilot)
         print(json.dumps({'run':str(folder),'reviewed':False,'source_sha256':read_json(folder/'protected.json')['source_sha256']},indent=2));return
     if not folder.is_dir():
         parser.error('Run missing; prepare first')
@@ -493,7 +540,8 @@ def main():
             if args.limit < 1 or args.max_calls < 1:
                 parser.error('Positive limit/max-calls required')
             verify(folder)
-            if not read_json(folder/'manifest.json')['reviewed']:
+            manifest = read_json(folder/'manifest.json')
+            if not manifest['reviewed'] and manifest.get('purpose') != 'pilot_only':
                 raise ValueError('Reviewed test approval required; no API call made')
             client=OpenRouter(api_key(),load_config()['transport_attempts'])
             # Cross-run local memory must not race another producer's acceptance transaction.

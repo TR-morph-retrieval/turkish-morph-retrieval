@@ -1,11 +1,16 @@
 {
-  "version": "train-v1",
+  "version": "train-v5-quality",
+  "composition_policy": {
+    "chain_fraction": 0.30,
+    "root_policy": "exclude_same_root_chain_pair"
+  },
   "generator": {
     "model": "google/gemini-3.8-flash",
+    "service_tier": "flex",
     "max_tokens": 5000,
     "reasoning": {"effort": "low", "exclude": true},
     "provider": {"sort": "price", "require_parameters": true, "allow_fallbacks": true,
-      "max_price": {"prompt": 0.75, "completion": 3.75}}
+      "max_price": {"prompt": 0.375, "completion": 1.875}}
   },
   "judges": {
     "semantic": {
@@ -18,12 +23,13 @@
       "model": "z-ai/glm-5.3-flash",
       "max_tokens": 3000,
       "reasoning": {"effort": "low", "exclude": true},
-      "provider": {"sort": "price", "require_parameters": true, "allow_fallbacks": true}
+      "provider": {"sort": "latency", "ignore": ["Wafer"], "require_parameters": true, "allow_fallbacks": true,
+        "max_price": {"prompt": 0.15, "completion": 0.5}}
     }
   },
   "confidence_threshold": 80,
-  "max_repairs": 2,
-  "max_judge_rounds": 3,
+  "max_repairs": 1,
+  "max_judge_rounds": 2,
   "max_generation_attempts": 3,
   "transport_attempts": 3
 }
