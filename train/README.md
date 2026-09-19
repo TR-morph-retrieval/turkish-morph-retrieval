@@ -18,7 +18,7 @@ test query/adayları hiçbir generator veya judge promptuna gönderilmez.
 
 1. **Prepare:** 600 korunan family'den metin/kök/şablon/ek-zinciri dışlama snapshot'ı.
 2. **Plan:** tekrar üretimde değişmeyen slotlar; aynı kota özellikleri korunur.
-3. **Approve:** insan kontrolünün bittiği test sürümü checksum + isim ile onaylanır.
+3. **Contract:** test snapshot'ı, kod/config ve plan checksum'ı run sözleşmesini oluşturur; train'de insan review kapısı yoktur.
 4. **Gemini:** ortak olay bilgisi, query, tek ortak bağlam ve dört kritik aday cümlesi üretir; pasajları Python birleştirir.
 5. **Yerel guard:** schema, metin/kök sızıntısı, soru/bildirim ve strict minimal-pair kontrolü.
 6. **Paralel iki judge:** Luna semantik turda etiketler gizli; GLM morfoloji turunda slot amaçlarını denetler.
@@ -86,15 +86,19 @@ uygun değildir. V6 kalite/hız ölçümü yeni run-id ile ayrıca yapılmalıd�
 python3 train/workflow.py prepare --run-id pilot1000 --source test/data/final_shards --size 1000
 python3 train/workflow.py status --run-id pilot1000
 
-# YALNIZ insan kontrolü gerçekten bitince. Checksum prepare çıktısındadır.
-python3 train/workflow.py approve --run-id pilot1000 --source-sha CHECKSUM --reviewer ISIM --confirm-human-review-complete
-
 # ÜCRETLİ. Anahtar OPENROUTER_API_KEY ortam değişkeninde veya repo .env dosyasında.
 # En fazla 10 YENİ kabul; en fazla 30 cache-dışı mantıksal LLM çağrısı.
 python3 train/workflow.py run --run-id pilot1000 --limit 10 --max-calls 30
 
 # Aynı komutla devam: kabul edilen slotlar atlanır.
 python3 train/workflow.py export --run-id pilot1000
+
+# Ekipçe sırayla üretim: önceki shard'ları çek/senkronize et, yalnız kendi aralığını üret.
+python3 train/workflow.py shard-sync --run-id train1000 --shard-dir train/data/shards
+python3 train/workflow.py run --run-id train1000 --from-index 1 --to-index 25 --limit 25 --max-calls 120
+python3 train/workflow.py shard-export --run-id train1000 --producer codex --from-index 1 --to-index 25 --output train/data/shards/codex_001_025.jsonl
+python3 train/workflow.py shard-status --run-id train1000 --shard-dir train/data/shards
+# JSONL + .manifest.json dosyalarını commit/push et; sonraki kişi pull edip kendi aralığını alır.
 
 # Ücretsiz kontroller
 python3 train/production.py --check-config
@@ -159,8 +163,26 @@ Kod sözleşmesi değiştiğinden eski run sessizce devam etmez, yeni prepare ge
   düzeltilen metinle birlikte güncellenir; guard ve iki judge bütün family'ye tekrar bakar.
 - API kesintisi, boş/kesilmiş cevap veri hatası değildir; `pending` kalır ve devam edilebilir.
 
-Confidence ölçülmüş hata oranı değildir. Human-review bekleme kuyruğu yoktur;
+Confidence ölçülmüş hata oranı değildir. Train'de human-review bekleme kuyruğu yoktur;
 otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
+
+## Train kalite kapıları
+
+- Semantic judge, positive için query'deki altı bilgi alanını (`positive_fact_coverage`)
+  ayrı ayrı raporlar; biri false veya belirsizse family kabul edilmez.
+- `pass` confidence değeri 80'in altındaysa kabul edilmez, yeni judge turu istenir.
+- Morphology judge'ın `natural=false` kararı veya düşük güvenli PASS sonucu family'yi
+  yeniden değerlendirmeye gönderir; yalnız sorunlu aday patch edilir.
+- Morph adaylarının lemma/POS bilgisi positive ile aynı hedef sözcükte kalmalı; kritik
+  sözcük çıkarıldıktan sonra kalan içerik belirgin biçimde kopmamalıdır. Yerel örtüşme
+  filtresi yalnız aşırı drift'i yakalamak için %45 eşiğindedir; yakın durumları judge değerlendirir.
+- Semantic judge `query_claims` ve `positive_claims` tablolarını kendisi çıkarır;
+  generator'ın `event_frame` bilgisi gold kanıtı sayılmaz. Özne/olay/yer/zaman/sonuç
+  kayması varsa positive coverage false olur.
+- Kabul edilen her family, `accepted.jsonl` içinde tam provenance ile tutulur; shard
+  yalnız kabul edilmiş family'leri ve ortak contract checksum'ını içerir.
+- Shard'lar 1-based aralık, checksum, slot sırası ve ortak sözleşme ile doğrulanır;
+  boşluk/çakışma/farklı config otomatik reddedilir.
 
 ## Sızıntı kontrollerinin kapsamı ve sınırı
 
@@ -196,6 +218,12 @@ judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 otomatik push edilmez. Veriyi paylaşırken bilinçli bir sürümleme/export kararı verilir.
 `accepted.jsonl` tek dosyada query/positive/negatives eğitim görünümünü ve ayrıntılı provenance'ı taşır.
 SQLite'ta slot durumları, denemeler, ret nedenleri, cache ve bütün çağrı olayları tutulur.
+`report.json` ayrıca judge kararlarını (pass/fail/abstain), repair sayısını, sonuç nedenlerini,
+provider denemelerini ve bilinen maliyeti özetler; pilot kalitesi bu rapor üzerinden karşılaştırılır.
+
+Paylaşılan güncel pilot havuzu `train/data/pilot/pilot40.jsonl` dosyasındadır. Bu kayıtlar
+`pilot_only` ve `eligible_for_final_train=false` taşır; model eğitiminin final girdisine
+otomatik katılmaz. Yerel SQLite/run klasörleri Git'e gönderilmez.
 
 Yerel run'lar arası kabul edilmiş train metinleri de duplicate kontrolüne katılır.
 Global yerel kilit iki üreticinin aynı anda kabul yazarak kopya kaçırmasını önler;

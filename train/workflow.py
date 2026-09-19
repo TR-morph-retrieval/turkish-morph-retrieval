@@ -222,6 +222,19 @@ class Guard:
             for candidate in item['candidates']:
                 if candidate['slot'] in {'morph_1', 'morph_2'} and context(candidate) != context(positive):
                     errors.append(f"quality:{candidate['slot']}:context_changed")
+                if candidate['slot'] in {'morph_1', 'morph_2'}:
+                    if candidate.get('critical_lemma') != positive.get('critical_lemma'):
+                        errors.append(f"quality:{candidate['slot']}:lemma_changed_outside_target")
+                    if candidate.get('critical_pos') != positive.get('critical_pos'):
+                        errors.append(f"quality:{candidate['slot']}:pos_changed_outside_target")
+                    base = set(normalized(positive.get('critical_sentence', '')).split())
+                    current = set(normalized(candidate.get('critical_sentence', '')).split())
+                    base.discard(normalized(positive.get('critical_word', '')))
+                    current.discard(normalized(candidate.get('critical_word', '')))
+                    # Morph targets may legitimately trigger a small syntactic rewrite.
+                    # Reject only an obvious non-target content break; judges assess the closer cases.
+                    if len(base & current) / max(1, len(base | current)) < 0.45:
+                        errors.append(f"quality:{candidate['slot']}:non_target_content_drift")
                 if candidate['slot'] == 'morph_1' and spec['family_mode'] == 'strict_minimal':
                     if candidate.get('critical_lemma') != positive.get('critical_lemma'):
                         errors.append('quality:morph_1:strict_lemma_changed')
@@ -375,16 +388,9 @@ def approve(folder, source_sha, reviewer):
 
 
 def generation_spec(spec, protected, attempt):
-    shared = {f['key'] for f in read_json(HERE/'catalog.json')['features']
-              if f.get('objective') == 'composition'}
     return {**spec, 'attempt': attempt,
-            'forbidden_lemmas': protected['forbidden_lemmas'],
-            'forbidden_root_chain_pairs': protected['chain_forbidden_lemmas'],
-            'forbidden_features': sorted(set(protected['forbidden_features']) - shared),
-            'shared_chain_features': sorted(shared),
-            'forbidden_templates':protected['forbidden_templates'],
             'required_metadata': 'template_id, domain, register; query_critical_word, query_critical_lemma, query_critical_sentence; each candidate critical_word, critical_lemma, critical_sentence',
-            'instructions': 'Plan alanları ve sayıları aynen koru. Ek cümleler doğal bağlam olsun. forbidden_root_chain_pairs eşlemesindeki zinciri belirtilen kökle query, aday veya bağlamda kullanma. Aynı kök başka zincirlerle, aynı zincir başka köklerle serbesttir; ayrı forbidden_lemmas yasağı saklıdır. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim.'}
+            'instructions': 'Plan alanları ve sayıları aynen koru. Ek cümleler doğal bağlam olsun. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim. Test koruma listeleri prompta verilmez; bunlar yerel guard tarafından denetlenir.'}
 
 
 def other_run_memory(folder):
@@ -400,10 +406,9 @@ def other_run_memory(folder):
     return items
 
 
-def generate_run(folder, client, limit=10, max_calls=30):
+def generate_run(folder, client, limit=10, max_calls=30, range_from=None, range_to=None):
     manifest, protected, plan = verify(folder)
-    if not manifest['reviewed'] and manifest.get('purpose') != 'pilot_only':
-        raise ValueError('Human-reviewed frozen test approval required; no paid requests sent')
+    # Train has no human-review gate; two automatic judges are the quality gate.
     cfg = manifest['config']
     store = Store(folder/'state.sqlite3')
     budget = {'remaining': max_calls, 'lock': threading.Lock()}
@@ -433,8 +438,6 @@ def generate_run(folder, client, limit=10, max_calls=30):
                             for stage in prior.get('events', [])
                             for finding in stage.get('findings', [])
                             if isinstance(finding, dict) and isinstance(finding.get('reason'), str)]
-                        prior_text = ' '.join([prior.get('family', {}).get('query_critical_word', ''), *[c.get('critical_word', '') for c in prior.get('family', {}).get('candidates', [])]])
-                        request_spec['avoid_previous_forbidden_words'] = sorted({w for w in normalized(prior_text).split() for lemma in protected['forbidden_lemmas'] if w == lemma or (len(lemma) >= 4 and w.startswith(lemma))})
                     item, prov = generate_family(cached, cfg, request_spec)
                     store.execute('UPDATE jobs SET draft=?,provenance=? WHERE id=?', (json.dumps(item,ensure_ascii=False), json.dumps(prov), sid))
                 else:
@@ -473,7 +476,8 @@ def generate_run(folder, client, limit=10, max_calls=30):
         return 'finished'
 
     accepted_now = 0
-    pending = iter(s for s in plan if store.execute('SELECT status FROM jobs WHERE id=?', (s['slot_id'],))[0][0]
+    selected = plan[(range_from - 1 if range_from else 0):(range_to if range_to else len(plan))]
+    pending = iter(s for s in selected if store.execute('SELECT status FROM jobs WHERE id=?', (s['slot_id'],))[0][0]
                    not in {'accepted', 'exhausted'})
     try:
         with ThreadPoolExecutor(max_workers=cfg['family_workers']) as pool:
@@ -502,6 +506,16 @@ def report(folder, store):
     accepted = store.accepted()
     request_events = store.execute("SELECT kind,value FROM events WHERE kind IN ('request_finished','request_failed')")
     known_cost, missing_cost, attempts = 0.0, 0, 0
+    judge_decisions, rejection_reasons, repairs = Counter(), Counter(), 0
+    for (payload,) in store.execute("SELECT value FROM events WHERE kind='family_result'"):
+        outcome = json.loads(payload)
+        rejection_reasons[outcome.get('reason', 'unknown')] += 1
+        for event in outcome.get('events', []):
+            stage = event.get('stage')
+            if stage in {'semantic', 'morphology'} and event.get('verdict', {}).get('decision'):
+                judge_decisions[f"{stage}:{event['verdict']['decision']}"] += 1
+            if stage == 'repair':
+                repairs += 1
     for kind, payload in request_events:
         obj = json.loads(payload)
         history = obj.get('provenance',{}).get('attempts',[]) if kind=='request_finished' else obj.get('attempts',[])
@@ -516,6 +530,8 @@ def report(folder, store):
             'plan_features':dict(Counter(x['target_feature'] for x in plan)),
             'plan_modes':dict(Counter(x['family_mode'] for x in plan)),
             'accepted_features':dict(Counter(x['target_feature'] for x in accepted)),
+            'judge_decisions':dict(judge_decisions), 'repairs':repairs,
+            'result_reasons':dict(rejection_reasons),
             'known_cost_usd':round(known_cost,6), 'attempts_without_cost':missing_cost,
             'recorded_provider_attempts':attempts,
             'unresolved_requests': len(store.execute("SELECT id FROM events WHERE kind='request_started'"))-len(request_events)}
@@ -558,7 +574,7 @@ def api_key():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='cmd', required=True)
-    for name in ['prepare','approve','run','status','export']:
+    for name in ['prepare','approve','run','status','export','shard-export','shard-sync','shard-status']:
         p=sub.add_parser(name);p.add_argument('--run-id', required=True)
         if name=='prepare':
             p.add_argument('--source', type=Path, required=True);p.add_argument('--size',type=int,default=1000);p.add_argument('--seed',type=int,default=42)
@@ -568,6 +584,12 @@ def main():
             p.add_argument('--confirm-human-review-complete',action='store_true',required=True)
         if name=='run':
             p.add_argument('--limit',type=int,default=10);p.add_argument('--max-calls',type=int,default=30)
+            p.add_argument('--from-index',type=int);p.add_argument('--to-index',type=int)
+        if name == 'shard-export':
+            p.add_argument('--output', required=True); p.add_argument('--producer', required=True)
+            p.add_argument('--from-index', type=int, required=True); p.add_argument('--to-index', type=int, required=True)
+        if name in {'shard-sync','shard-status'}:
+            p.add_argument('--shard-dir', default=str(HERE/'data'/'shards'))
     args=parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',args.run_id):
         parser.error('Invalid run id')
@@ -587,13 +609,24 @@ def main():
                 parser.error('Positive limit/max-calls required')
             verify(folder)
             manifest = read_json(folder/'manifest.json')
-            if not manifest['reviewed'] and manifest.get('purpose') != 'pilot_only':
-                raise ValueError('Reviewed test approval required; no API call made')
+            # Final train generation is intentionally automatic; test approval is separate.
             client=OpenRouter(api_key(),load_config()['transport_attempts'])
             # Cross-run local memory must not race another producer's acceptance transaction.
             with run_lock(HERE/'runs'):
-                print(json.dumps(generate_run(folder,client,args.limit,args.max_calls),ensure_ascii=False,indent=2))
+                if args.from_index and (args.from_index < 1 or (args.to_index and args.to_index < args.from_index)):
+                    parser.error('Geçersiz train aralığı')
+                print(json.dumps(generate_run(folder,client,args.limit,args.max_calls,args.from_index,args.to_index),ensure_ascii=False,indent=2))
             return
+        if args.cmd in {'shard-export','shard-sync','shard-status'}:
+            from shards import export_shard, sync_shards, validate_shards
+            shard_dir = Path(getattr(args, 'shard_dir', HERE/'data'/'shards'))
+            if args.cmd == 'shard-export':
+                value = export_shard(folder, Path(args.output), args.producer, args.from_index, args.to_index)
+            elif args.cmd == 'shard-sync':
+                value = sync_shards(folder, shard_dir)
+            else:
+                value = validate_shards(folder, shard_dir)
+            print(json.dumps(value, ensure_ascii=False, indent=2)); return
         store=Store(folder/'state.sqlite3')
         try:
             print(json.dumps(report(folder,store) if args.cmd=='status' else {'export':export(folder,store)},ensure_ascii=False,indent=2))

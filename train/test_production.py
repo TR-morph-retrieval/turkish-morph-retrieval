@@ -20,15 +20,22 @@ FAMILY = dict(query='Bora tutarı geri göndermedi.', target_feature='NEG',
                   dict(slot='semantic_1', text='Ece parayı iade etmedi.')])
 for candidate in FAMILY['candidates']:
     candidate['critical_sentence'] = candidate['text']
+    candidate['critical_lemma'] = 'iade'
+    candidate['critical_pos'] = 'VERB'
     if candidate['slot'].startswith('morph_'):
         candidate['morph_change'] = {'feature':'NEG', 'from':'negative', 'to':'affirmative'}
 
 
 def add_checks(verdict, data, morphology=False):
-    keys = ('target_valid', 'natural', 'content_preserved') if morphology else FACT_KEYS
+    keys = ('target_valid', 'target_feature_match', 'natural', 'content_preserved') if morphology else FACT_KEYS
+    if not morphology:
+        verdict['positive_fact_coverage'] = {k: True for k in FACT_KEYS}
+        verdict['query_claims'] = {k: 'fixture' for k in FACT_KEYS}
+        verdict['positive_claims'] = {k: 'fixture' for k in FACT_KEYS}
     verdict['candidate_checks'] = [
         {'candidate_id': c['candidate_id'],
          'checks': {k: (True if morphology or k != 'event' else c['candidate_id'] in verdict.get('relevant_ids', [])) for k in keys},
+         **({'observed_feature': 'NEG karşıtlığı'} if morphology else {}),
          'evidence': 'Synthetic fixture comparison'} for c in data['candidates']]
     return verdict
 
@@ -89,6 +96,14 @@ class ProductionTests(unittest.TestCase):
         v['candidate_checks'][0]['checks']['content_preserved'] = False
         self.assertEqual(checked_verdict(v, 'morphology', {'c0':'morph_1'})['decision'], 'fail')
 
+    def test_wrong_realized_target_feature_overrides_pass(self):
+        v = report(); add_checks(v, {'candidates':[{'candidate_id':'c0'}]}, True)
+        v['candidate_checks'][0]['checks']['target_feature_match'] = False
+        v['candidate_checks'][0]['observed_feature'] = 'Hedef PL yerine olumsuzluk değişmiş.'
+        checked = checked_verdict(v, 'morphology', {'c0':'morph_1'})
+        self.assertEqual(checked['decision'], 'fail')
+        self.assertEqual(checked['findings'][0]['candidate_id'], 'c0')
+
     def test_context_materialized_once_and_repairable(self):
         f = deepcopy(FAMILY); f['context_sentences'] = ['Nötr bağlam.']; f['critical_position'] = 1
         out = materialize(f)
@@ -102,7 +117,7 @@ class ProductionTests(unittest.TestCase):
 
     def test_threshold(self):
         self.assertEqual(policy({'semantic':report(confidence=80), 'morphology':report(confidence=80)}, {'c0'})['action'], 'accept')
-        self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'accept')
+        self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'retry')
 
     def test_invalid_reports(self):
         for bad in [{}, report(confidence=True), report(confidence=float('nan')), report('fail'),
@@ -135,7 +150,7 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(out['status'], 'rejected'); self.assertEqual(out['repairs'], 1)
 
     def test_uncertain(self):
-        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'accepted')
+        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'rejected')
 
     def test_blind_relevance(self):
         self.assertNotEqual(evaluate(FAMILY, FakeClient('blind_mismatch'), load_config(), lambda x:[])['status'], 'accepted')

@@ -13,6 +13,7 @@ from production import FACT_KEYS, load_config
 from test_production import add_checks
 from workflow import (Guard, SimilarityIndex, Store, approve, contract, export, generate_run,
                       make_plan, prepare, read_json, report, run_lock, snapshot, verify, CachedClient)
+from shards import export_shard, validate_shards, sync_shards
 
 
 SPEC = {'slot_id':'train_000001','target_feature':'NEG','target_description':'Eylem gerçekleşmez',
@@ -30,10 +31,11 @@ def fixture():
     for slot, text, word in [
         ('positive','Suna dün havuzda hiç yüzmedi.','yüzmedi'),
         ('morph_1','Suna dün havuzda hiç yüzdü.','yüzdü'),
-        ('morph_2','Suna yarın havuzda hiç yüzmeyecek.','yüzmeyecek'),
+        ('morph_2','Suna dün havuzda hiç yüzmeyecek.','yüzmeyecek'),
         ('semantic_1','Yelda dün gölette hiç yüzmedi.','yüzmedi')]:
-        item['candidates'].append(dict(slot=slot,text=text,critical_sentence=text,critical_word=word,critical_lemma='yüz'))
+        item['candidates'].append(dict(slot=slot,text=text,critical_sentence=text,critical_word=word,critical_lemma='yüz',critical_pos='VERB'))
         if slot.startswith('morph_'):
+            item['candidates'][-1]['critical_pos'] = 'VERB'
             item['candidates'][-1]['morph_change'] = {'feature':'NEG', 'from':'negative', 'to':'affirmative'}
     return item
 
@@ -177,10 +179,20 @@ class WorkflowTests(unittest.TestCase):
     def approved(self):
         approve(self.folder,read_json(self.folder/'protected.json')['source_sha256'],'offline fixture reviewer')
 
-    def test_unapproved_no_calls(self):
+    def test_final_train_has_no_human_gate(self):
         client=Client()
-        with self.assertRaises(ValueError):generate_run(self.folder,client)
-        self.assertEqual(client.calls,0)
+        self.assertEqual(generate_run(self.folder,client)['accepted'],1)
+        self.assertEqual(client.calls,3)
+
+    def test_git_jsonl_shard_round_trip(self):
+        client = Client()
+        self.assertEqual(generate_run(self.folder, client)['accepted'], 1)
+        shard_dir = self.root / 'shards'
+        shard = shard_dir / 'codex_001_001.jsonl'
+        export_shard(self.folder, shard, 'codex', 1, 1)
+        status = validate_shards(self.folder, shard_dir)
+        self.assertEqual(status['covered'], 1)
+        self.assertEqual(sync_shards(self.folder, shard_dir)['imported'], 0)
 
     def test_resume_and_export(self):
         self.approved();client=Client()

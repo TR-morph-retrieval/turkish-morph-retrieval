@@ -8,6 +8,21 @@ import sqlite3
 ROOT = Path(__file__).resolve().parent / 'runs'
 
 
+def _pilot_jsonl_record(row):
+    """Namespace reusable per-run IDs without mutating the source record."""
+    record = json.loads(json.dumps(row['record'], ensure_ascii=False))
+    family = record['family']
+    family['source_family_id'] = family.get('family_id')
+    family['family_id'] = row['review_id']
+    record.update({
+        'pilot_review_id': row['review_id'],
+        'source_run': row['source_run'],
+        'purpose': 'pilot_only',
+        'eligible_for_final_train': False,
+    })
+    return record
+
+
 def bundle(names, output):
     records, costs = [], {}
     for name in names:
@@ -43,6 +58,9 @@ def bundle(names, output):
     output.mkdir(parents=True, exist_ok=True)
     data = {'purpose': 'pilot_only', 'records': records, 'costs': costs}
     (output / 'data.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    (output / 'accepted.jsonl').write_text(
+        ''.join(json.dumps(_pilot_jsonl_record(r), ensure_ascii=False) + '\n' for r in records),
+        encoding='utf-8')
     audit_input = [{'review_id': r['review_id'], 'family': r['record']['family']} for r in records]
     (output / 'audit_input.json').write_text(json.dumps(audit_input, ensure_ascii=False, indent=2), encoding='utf-8')
     return data

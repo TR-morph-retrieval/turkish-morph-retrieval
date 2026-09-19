@@ -1,5 +1,5 @@
 {
-  "version": "train-v7-luna-flex",
+  "version": "train-v8-target-fidelity",
   "family_workers": 3,
   "composition_policy": {
     "chain_fraction": 0.30,
