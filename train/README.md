@@ -17,8 +17,8 @@ test query/adayları hiçbir generator veya judge promptuna gönderilmez.
 1. **Prepare:** 600 korunan family'den metin/kök/şablon/ek-zinciri dışlama snapshot'ı.
 2. **Plan:** tekrar üretimde değişmeyen slotlar; aynı kota özellikleri korunur.
 3. **Approve:** insan kontrolünün bittiği test sürümü checksum + isim ile onaylanır.
-4. **Gemini:** bir query, positive, iki morfolojik hard ve bir semantik hard üretir.
-5. **Yerel guard:** schema, metin/kök sızıntısı, uzunluk, soru/bildirim, minimal-pair kontrolü.
+4. **Gemini:** ortak olay bilgisi, query, tek ortak bağlam ve dört kritik aday cümlesi üretir; pasajları Python birleştirir.
+5. **Yerel guard:** schema, metin/kök sızıntısı, soru/bildirim ve strict minimal-pair kontrolü.
 6. **Paralel iki judge:** DeepSeek semantik turda etiketler gizli; GLM morfoloji turunda slot amaçlarını denetler.
 7. **Karar:** kabul / aday düzeltme / aynı kotada yeni family / teknik erteleme.
 8. **SQLite → JSONL:** güvenli devam, provenance, maliyet ve eğitim görünümü.
@@ -65,11 +65,10 @@ Sızıntı filtreleri ve iki judge değişmez; insan onayı uydurulmaz. Manifest
 `purpose=pilot_only`, `eligible_for_final_train=false` taşır. Pilot çıktısı final
 train'e eklenmez; final üretim için onaylı kaynakla ayrı run gerekir.
 
-### Güncel pilot ölçümü (18 Eylül 2026)
+### Eski pilot ölçümü (18 Eylül 2026)
 
-`runs/pilot5_v4/` tek güncel pilot klasörüdür: SQLite/cache, koruma kaydı, plan ve
-manifest; `accepted.jsonl` beş otomatik kabul; `report.json` durum raporu;
-`measurement.json` model/token/ücret ve süre ölçümü; `pilot.html` okunabilir örnekler.
+Pilot veri klasörleri ve yerel SQLite/cache kayıtları kullanıcı isteğiyle silinmiştir;
+bu bölüm yalnız geçmiş koşunun ölçüm özetidir, mevcut veri dosyası veya kalite onayı değildir.
 Beş kabul için toplam 208,49 saniye / $0,050287 harcandı; düzeltmeler ve iki
 tükenen slotun maliyeti dahildir. Gemini 3.8 Flash çağrılarının tamamı Flex idi.
 Bu küçük pilotun doğrusal 1.000-kabul tahmini yaklaşık $10,06 ve sıralı 11,58 saattir;
@@ -77,6 +76,8 @@ fiyat/sağlayıcı/ret oranına bağlıdır, garanti veya kalite onayı değildi
 Okumada katılımcı/zaman/yer kaymaları bulundu: otomatik kabul edilmiş bu pilot
 final train'e alınmaz. Büyük üretimden önce positive anlam koruması ve morfolojik
 negatiflerin hedef dışı içerik değişimleri güçlendirilmelidir.
+19 Eylül'de yapılan sonraki v5 pilotu da v6 sözleşmesinden öncedir ve final train'e
+uygun değildir. V6 kalite/hız ölçümü yeni run-id ile ayrıca yapılmalıdır.
 
 ```bash
 # API yok: mevcut 600'den taslak plan çıkarır, hiçbir insan onayı uydurmaz.
@@ -106,7 +107,29 @@ approve kaydı sorumlu kişinin açık beyanıdır.
 
 ## Judge politikası
 
-### Train-v5 kalite kuralları
+### Train-v6 kalite ve paralellik
+
+`family_workers=3`: en fazla üç family eşzamanlı ilerler; her biri ayrı generator
+çağrısıdır. Her family'nin iki judge'ı paralel çalışır (en fazla altı judge isteği).
+Global çağrı bütçesi kilitle paylaşılır; `--limit` kadar yeni kabul sınırı aşılmaz.
+SQLite event'leri slot kimliğini korur. Kabulden hemen önce kilitli duplicate kontrolü
+tekrarlanır; eşzamanlı benzer çıktılar birlikte kabul edilmez. Run/global üretim
+kilitleri korunur. Dalga en fazla üç slot içerir; yavaş slot bir sonraki dalgayı bekletir.
+
+Generator `event_frame` içinde katılımcılar, nesne, olay, yer, zaman ve sonucu bir kez
+yazar. `context_sentences` ve sıfır tabanlı `critical_position` Python'a aktarılır;
+aday başına yalnız kritik cümle, lemma/sözcük ve morph negatiflerde `morph_change`
+(feature/from/to) üretilir. Ortak bağlam tüm adaylarla uyumlu, nötr olmalıdır.
+Üretici `text` tekrarı yazmaz; Python çıktı ve patch sonrasında metni yeniden kurar.
+
+Her judge dört aday için kısa `candidate_checks` ve metinden kanıt döndürür.
+Semantik judge altı olay alanını doğrudan query/aday metinlerinden karşılaştırır;
+generator'ın event_frame'i ve gold etiketi bu judge'a verilmez. `relevant_ids` ile
+alan sonuçları çelişirse veya eksik/null alan varsa otomatik kabul edilmez.
+Morfoloji judge target_valid/natural/content_preserved alanlarını kontrol eder;
+genel pass yazsa bile false kontrol sonucu fail'e dönüştürülür. Üreticinin
+morph_change açıklaması kanıt sayılmaz. Bunlar model değerlendirmeleridir; gerçek
+semantik doğruluk ayrıca pilotla ölçülmelidir.
 
 Üretim sırası query → anlamı koruyan positive → positive'dan iki morfolojik karşıt
 → ayrı içerik negatifi şeklindedir. Query–positive kopyası yerel filtreyle engellenir.

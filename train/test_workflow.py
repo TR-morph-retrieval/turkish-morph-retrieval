@@ -3,12 +3,16 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import unittest
 from unittest.mock import patch
 
 from production import TransportError
+from production import FACT_KEYS, load_config
+from test_production import add_checks
 from workflow import (Guard, SimilarityIndex, Store, approve, contract, export, generate_run,
-                      make_plan, prepare, read_json, report, run_lock, snapshot, verify)
+                      make_plan, prepare, read_json, report, run_lock, snapshot, verify, CachedClient)
 
 
 SPEC = {'slot_id':'train_000001','target_feature':'NEG','target_description':'Eylem gerçekleşmez',
@@ -19,6 +23,7 @@ SPEC = {'slot_id':'train_000001','target_feature':'NEG','target_description':'Ey
 
 def fixture():
     item = dict(query='Suna dün havuzda suya girmedi.', query_critical_word='girmedi',
+                event_frame={k:'unspecified' for k in FACT_KEYS}, context_sentences=[], critical_position=0,
                 query_critical_lemma='gir', query_critical_sentence='Suna dün havuzda suya girmedi.',
                 target_feature='NEG',target_description='Eylem gerçekleşmez',template_id='event_report',
                 domain='daily_life',register='everyday',candidates=[])
@@ -28,6 +33,8 @@ def fixture():
         ('morph_2','Suna yarın havuzda hiç yüzmeyecek.','yüzmeyecek'),
         ('semantic_1','Yelda dün gölette hiç yüzmedi.','yüzmedi')]:
         item['candidates'].append(dict(slot=slot,text=text,critical_sentence=text,critical_word=word,critical_lemma='yüz'))
+        if slot.startswith('morph_'):
+            item['candidates'][-1]['morph_change'] = {'feature':'NEG', 'from':'negative', 'to':'affirmative'}
     return item
 
 
@@ -45,17 +52,75 @@ class Client:
                 raise TransportError('temporary fixture failure')
             data=json.loads(prompt.split('Veri:\n')[1])
             cid=next(c['candidate_id'] for c in data['candidates'] if c['text']==fixture()['candidates'][0]['text'])
-            value=dict(decision='pass',confidence=90,reason='Offline fixture',findings=[],relevant_ids=[cid])
+            value=add_checks(dict(decision='pass',confidence=90,reason='Offline fixture',findings=[],relevant_ids=[cid]), data, settings['model'].startswith('z-ai/'))
         return value,{'model':settings['model'],'attempts':[{'usage':{'cost':.001},'provider':'offline','seconds':.1}]}
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_parallel_workers_do_not_exceed_acceptance_limit(self):
+        folder = self.root/'limited'
+        specs = [{**SPEC, 'slot_id':f'limited_{i}'} for i in range(3)]
+        with patch('workflow.make_plan',return_value=specs):
+            prepare(folder,self.source,3,42,pilot=True)
+        client = Client()
+        out = generate_run(folder,client,limit=1)
+        self.assertEqual(out['accepted'],1)
+        self.assertEqual(out['statuses']['pending'],2)
+        self.assertEqual(client.calls,3)
+
+    def test_parallel_acceptance_rechecks_duplicates(self):
+        folder = self.root/'parallel'
+        specs = [{**SPEC, 'slot_id':f'parallel_{i}'} for i in range(3)]
+        cfg = load_config(); cfg['max_generation_attempts'] = 1
+        barrier = threading.Barrier(3)
+        def judged(item, *args):
+            barrier.wait(timeout=5)
+            return {'status':'accepted', 'reason':'fixture', 'family':item, 'events':[], 'repairs':0}
+        with patch('workflow.load_config',return_value=cfg), patch('workflow.make_plan',return_value=specs):
+            prepare(folder,self.source,3,42,pilot=True)
+            with patch('workflow.generate_family',side_effect=lambda *args:(fixture(),{})), patch('workflow.evaluate',side_effect=judged):
+                out = generate_run(folder,Client(),limit=3)
+        self.assertEqual(out['accepted'],1)
+        self.assertEqual(out['statuses']['exhausted'],2)
+
+    def test_parallel_call_budget_and_job_provenance(self):
+        db = Store(self.root/'budget.sqlite3')
+        budget = {'remaining':2, 'lock':threading.Lock()}
+        class RawClient:
+            def call(self, settings, prompt):
+                return {'ok':True}, {'attempts':[]}
+        def call(i):
+            client = CachedClient(db,RawClient(),2,job=str(i),budget=budget)
+            try:
+                client.call({'model':'fixture'},str(i)); return True
+            except TransportError:
+                return False
+        try:
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                self.assertEqual(sum(pool.map(call,range(3))),2)
+            starts = db.execute("SELECT job,value FROM events WHERE kind='request_started'")
+            ends = db.execute("SELECT job,value FROM events WHERE kind='request_finished'")
+            self.assertEqual({(j,json.loads(v)['key']) for j,v in starts},
+                             {(j,json.loads(v)['key']) for j,v in ends})
+            self.assertEqual(budget['remaining'],0)
+        finally:
+            db.close()
+
     def test_morph_context_must_be_shared(self):
         item = fixture()
         item['candidates'][0]['text'] = 'İşlem kayda alındı. ' + item['candidates'][0]['text']
         errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
         self.assertIn('quality:morph_1:context_changed', errors)
         self.assertIn('quality:morph_2:context_changed', errors)
+
+    def test_planned_sentence_counts_are_enforced(self):
+        item = fixture(); item['context_sentences'] = ['Nötr bağlam.']
+        errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
+        self.assertIn('quality:shared_context_sentence_count', errors)
+        item['context_sentences'] = []
+        item['query'] = 'İlk cümle. İkinci cümle.'
+        errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
+        self.assertIn('quality:query_sentence_count', errors)
 
     def test_strict_pair_cannot_change_non_target_content(self):
         item = fixture();candidate = item['candidates'][1]

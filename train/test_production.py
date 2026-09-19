@@ -4,7 +4,7 @@ from copy import deepcopy
 import unittest
 from unittest.mock import patch
 from io import BytesIO
-from production import load_config, policy, validate_family, evaluate, TransportError, OpenRouter, judge_prompt
+from production import load_config, policy, validate_family, evaluate, TransportError, OpenRouter, judge_prompt, FACT_KEYS, materialize, checked_verdict
 
 
 def report(decision='pass', confidence=88, findings=None):
@@ -12,11 +12,25 @@ def report(decision='pass', confidence=88, findings=None):
 
 
 FAMILY = dict(query='Bora tutarı geri göndermedi.', target_feature='NEG',
+              event_frame={k: 'unspecified' for k in FACT_KEYS}, context_sentences=[], critical_position=0,
               target_description='Eylemin gerçekleşmemesi', candidates=[
                   dict(slot='positive', text='Bora parayı iade etmedi.'),
                   dict(slot='morph_1', text='Bora parayı iade etti.'),
                   dict(slot='morph_2', text='Bora parayı iade etmeyecek.'),
                   dict(slot='semantic_1', text='Ece parayı iade etmedi.')])
+for candidate in FAMILY['candidates']:
+    candidate['critical_sentence'] = candidate['text']
+    if candidate['slot'].startswith('morph_'):
+        candidate['morph_change'] = {'feature':'NEG', 'from':'negative', 'to':'affirmative'}
+
+
+def add_checks(verdict, data, morphology=False):
+    keys = ('target_valid', 'natural', 'content_preserved') if morphology else FACT_KEYS
+    verdict['candidate_checks'] = [
+        {'candidate_id': c['candidate_id'],
+         'checks': {k: (True if morphology or k != 'event' else c['candidate_id'] in verdict.get('relevant_ids', [])) for k in keys},
+         'evidence': 'Synthetic fixture comparison'} for c in data['candidates']]
+    return verdict
 
 
 class FakeClient:
@@ -27,7 +41,7 @@ class FakeClient:
         if settings['model'].startswith('google/'):
             self.patches += 1
             slot = 'positive' if self.mode == 'unauthorized_patch' else 'morph_1'
-            return {'patches': [{'slot': slot, 'text': 'Bora parayı dün iade etti.'}]}, {}
+            return {'patches': [{'slot': slot, 'critical_sentence': 'Bora parayı dün iade etti.'}]}, {}
         if self.mode == 'transport':
             raise TransportError('offline failure')
         data = json.loads(prompt.split('Veri:\n')[1])
@@ -42,10 +56,44 @@ class FakeClient:
         if self.mode in {'repair', 'unauthorized_patch', 'always_fail'} and (not self.patches or self.mode == 'always_fail'):
             v = report('fail', 90, [{'candidate_id': wrong, 'reason': 'Hatalı aday'}])
             v['relevant_ids'] = [positive]
-        return v, {'requested_model': settings['model']}
+        return add_checks(v, data, settings['model'].startswith('z-ai/')), {'requested_model': settings['model']}
 
 
 class ProductionTests(unittest.TestCase):
+    def test_missing_and_contradictory_checks_cannot_pass(self):
+        ids = {'c0':'positive'}
+        v = report(); v['relevant_ids'] = ['c0']
+        self.assertEqual(checked_verdict(v, 'semantic', ids), {})
+
+    def test_location_drift_cannot_be_a_semantic_pass(self):
+        ids = {'c0':'positive', 'c1':'morph_1'}
+        v = report(); v['relevant_ids'] = ['c0']
+        v['candidate_checks'] = []
+        for cid in ids:
+            checks = {k: True for k in FACT_KEYS}
+            if cid == 'c0':
+                checks['place'] = False  # query=sığınak, candidate=zirve
+            else:
+                checks['event'] = False
+            v['candidate_checks'].append({'candidate_id':cid, 'checks':checks,
+                                          'evidence':'Sığınak yerine zirve yazılmış.'})
+        self.assertEqual(checked_verdict(v, 'semantic', ids), {})
+        add_checks(v, {'candidates':[{'candidate_id':'c0'}]})
+        v['candidate_checks'][0]['checks']['place'] = False
+        self.assertEqual(checked_verdict(v, 'semantic', ids), {})
+        v['candidate_checks'][0]['checks']['place'] = None
+        self.assertEqual(checked_verdict(v, 'semantic', ids), {})
+
+    def test_morphology_false_check_overrides_pass(self):
+        v = report(); add_checks(v, {'candidates':[{'candidate_id':'c0'}]}, True)
+        v['candidate_checks'][0]['checks']['content_preserved'] = False
+        self.assertEqual(checked_verdict(v, 'morphology', {'c0':'morph_1'})['decision'], 'fail')
+
+    def test_context_materialized_once_and_repairable(self):
+        f = deepcopy(FAMILY); f['context_sentences'] = ['Nötr bağlam.']; f['critical_position'] = 1
+        out = materialize(f)
+        self.assertTrue(all(c['text'] == 'Nötr bağlam. ' + c['critical_sentence'] for c in out['candidates']))
+        self.assertEqual(materialize(out), out)
     def test_role_visibility_is_scoped_to_morphology(self):
         semantic = json.loads(judge_prompt(FAMILY, 'semantic', FAMILY['candidates']).split('Veri:\n')[1])
         morphology = json.loads(judge_prompt(FAMILY, 'morphology', FAMILY['candidates']).split('Veri:\n')[1])

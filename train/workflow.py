@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -208,6 +209,10 @@ class Guard:
             errors.append('plan:domain_or_register_changed')
         texts = [item['query']] + [c['text'] for c in item['candidates']]
         positive = next((c for c in item['candidates'] if c['slot'] == 'positive'), {})
+        if len(sentence_parts(item.get('query', ''))) != spec['query_sentence_count']:
+            errors.append('quality:query_sentence_count')
+        if len(item.get('context_sentences', [])) != spec['passage_sentence_count'] - 1:
+            errors.append('quality:shared_context_sentence_count')
         query_sentence = normalized(item.get('query_critical_sentence', item['query']))
         if query_sentence and any(query_sentence == normalized(s) for s in sentence_parts(positive.get('text', ''))):
             errors.append('quality:query_sentence_copied_into_positive')
@@ -293,10 +298,16 @@ class Store:
 
 
 class CachedClient:
-    def __init__(self, store, client, max_calls):
-        self.store, self.client, self.remaining = store, client, max_calls
-        self.lock = threading.Lock()
-        self.job = None
+    def __init__(self, store, client, max_calls, job=None, budget=None):
+        self.store, self.client = store, client
+        self.budget = budget if budget is not None else {'remaining': max_calls, 'lock': threading.Lock()}
+        self.lock = self.budget['lock']
+        self.job = job
+
+    @property
+    def remaining(self):
+        with self.lock:
+            return self.budget['remaining']
 
     def call(self, settings, prompt):
         key = digest([settings, prompt])
@@ -304,9 +315,9 @@ class CachedClient:
         if cached:
             return json.loads(cached[0][0]), {**json.loads(cached[0][1]), 'cache_hit': True}
         with self.lock:
-            if self.remaining <= 0:
+            if self.budget['remaining'] <= 0:
                 raise TransportError('Per-invocation logical call cap reached')
-            self.remaining -= 1
+            self.budget['remaining'] -= 1
         self.store.event(self.job, 'request_started', {'key': key, 'model': settings['model']})
         try:
             value, provenance = self.client.call(settings, prompt)
@@ -395,56 +406,91 @@ def generate_run(folder, client, limit=10, max_calls=30):
         raise ValueError('Human-reviewed frozen test approval required; no paid requests sent')
     cfg = manifest['config']
     store = Store(folder/'state.sqlite3')
-    cached = CachedClient(store, client, max_calls)
+    budget = {'remaining': max_calls, 'lock': threading.Lock()}
     guard = Guard(protected, [*store.accepted(), *other_run_memory(folder)])
-    accepted_now = 0
-    try:
-        for spec in plan:
-            if accepted_now >= limit or cached.remaining <= 0:
+    guard_lock = threading.RLock()
+    def checked(item, spec):
+        with guard_lock:
+            return guard.check(item, spec)
+
+    def process(spec):
+        sid = spec['slot_id']
+        cached = CachedClient(store, client, max_calls, job=sid, budget=budget)
+        while True:
+            row = store.execute('SELECT status,attempt,draft,provenance,result FROM jobs WHERE id=?', (sid,))[0]
+            status, attempt, draft, provenance, previous = row
+            if status in {'accepted','exhausted'}:
                 break
-            sid = spec['slot_id']; cached.job = sid
-            while True:
-                row = store.execute('SELECT status,attempt,draft,provenance,result FROM jobs WHERE id=?', (sid,))[0]
-                status, attempt, draft, provenance, previous = row
-                if status in {'accepted','exhausted'}:
-                    break
+            verify(folder)
+            try:
+                if draft is None:
+                    request_spec = generation_spec(spec, protected, attempt)
+                    if previous:
+                        prior = json.loads(previous)
+                        request_spec['previous_errors'] = [e for stage in prior.get('events', []) for e in stage.get('errors', [])]
+                        request_spec['previous_errors'] += [
+                            f"{stage.get('stage')}: {finding['reason']}"
+                            for stage in prior.get('events', [])
+                            for finding in stage.get('findings', [])
+                            if isinstance(finding, dict) and isinstance(finding.get('reason'), str)]
+                        prior_text = ' '.join([prior.get('family', {}).get('query_critical_word', ''), *[c.get('critical_word', '') for c in prior.get('family', {}).get('candidates', [])]])
+                        request_spec['avoid_previous_forbidden_words'] = sorted({w for w in normalized(prior_text).split() for lemma in protected['forbidden_lemmas'] if w == lemma or (len(lemma) >= 4 and w.startswith(lemma))})
+                    item, prov = generate_family(cached, cfg, request_spec)
+                    store.execute('UPDATE jobs SET draft=?,provenance=? WHERE id=?', (json.dumps(item,ensure_ascii=False), json.dumps(prov), sid))
+                else:
+                    item, prov = json.loads(draft), json.loads(provenance)
+                if isinstance(item, dict):
+                    item['train_constraints'] = {k:v for k,v in generation_spec(spec,protected,attempt).items()
+                                                 if k not in {'slot_id','attempt','required_metadata','instructions'}}
+                outcome = evaluate(item, cached, cfg, lambda x: checked(x, spec))
+            except TransportError as exc:
+                store.event(sid, 'deferred_transport', {'reason':str(exc)})
+                return 'deferred'
+            outcome.update(slot_id=sid, generation_attempt=attempt, generator=prov, generation_spec=spec)
+            store.event(sid, 'family_result', outcome)
+            if outcome['status'] == 'deferred_transport':
+                store.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps(outcome,ensure_ascii=False),sid))
+                return 'deferred'
+            if outcome['status'] == 'accepted':
                 verify(folder)
-                try:
-                    if draft is None:
-                        request_spec = generation_spec(spec, protected, attempt)
-                        if previous:
-                            prior = json.loads(previous)
-                            request_spec['previous_errors'] = [e for stage in prior.get('events', []) for e in stage.get('errors', [])]
-                            prior_text = ' '.join([prior.get('family', {}).get('query_critical_word', ''), *[c.get('critical_word', '') for c in prior.get('family', {}).get('candidates', [])]])
-                            request_spec['avoid_previous_forbidden_words'] = sorted({w for w in normalized(prior_text).split() for lemma in protected['forbidden_lemmas'] if w == lemma or (len(lemma) >= 4 and w.startswith(lemma))})
-                        item, prov = generate_family(cached, cfg, request_spec)
-                        store.execute('UPDATE jobs SET draft=?,provenance=? WHERE id=?', (json.dumps(item,ensure_ascii=False), json.dumps(prov), sid))
-                    else:
-                        item, prov = json.loads(draft), json.loads(provenance)
-                    if isinstance(item, dict):
-                        item['train_constraints'] = {k:v for k,v in generation_spec(spec,protected,attempt).items()
-                                                     if k not in {'slot_id','attempt','required_metadata','instructions'}}
-                    outcome = evaluate(item, cached, cfg, lambda x: guard.check(x, spec))
-                except TransportError as exc:
-                    store.event(sid, 'deferred_transport', {'reason':str(exc)})
-                    return report(folder, store)
-                outcome.update(slot_id=sid, generation_attempt=attempt, generator=prov, generation_spec=spec)
-                store.event(sid, 'family_result', outcome)
-                if outcome['status'] == 'deferred_transport':
-                    store.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps(outcome,ensure_ascii=False),sid))
-                    return report(folder, store)
-                if outcome['status'] == 'accepted':
-                    verify(folder)
-                    outcome['family']['family_id'] = sid
-                    store.execute("UPDATE jobs SET status='accepted',result=? WHERE id=?", (json.dumps(outcome,ensure_ascii=False),sid))
-                    guard.add(outcome['family']); accepted_now += 1
+                with guard_lock:
+                    # Atomic recheck + commit prevents concurrent near-duplicate acceptance.
+                    conflicts = guard.check(outcome['family'], spec)
+                    if not conflicts:
+                        outcome['family']['family_id'] = sid
+                        store.execute("UPDATE jobs SET status='accepted',result=? WHERE id=?", (json.dumps(outcome,ensure_ascii=False),sid))
+                        guard.add(outcome['family'])
+                        return 'accepted'
+                    outcome.update(status='rejected', reason='concurrent_duplicate_or_guard_failure')
+                    outcome['events'].append({'stage': 'local_validation', 'errors': conflicts})
+                    store.event(sid, 'commit_rejected', outcome)
+            if attempt >= cfg['max_generation_attempts']:
+                store.execute("UPDATE jobs SET status='exhausted',result=? WHERE id=?", (json.dumps(outcome,ensure_ascii=False),sid))
+                break
+            store.execute("UPDATE jobs SET attempt=attempt+1,draft=NULL,provenance=NULL,result=? WHERE id=?",(json.dumps(outcome,ensure_ascii=False),sid))
+            if cached.remaining <= 0:
+                return 'deferred'
+        return 'finished'
+
+    accepted_now = 0
+    pending = iter(s for s in plan if store.execute('SELECT status FROM jobs WHERE id=?', (s['slot_id'],))[0][0]
+                   not in {'accepted', 'exhausted'})
+    try:
+        with ThreadPoolExecutor(max_workers=cfg['family_workers']) as pool:
+            while accepted_now < limit and budget['remaining'] > 0:
+                # At most the remaining acceptance allowance is in flight.
+                batch = []
+                for _ in range(min(cfg['family_workers'], limit - accepted_now)):
+                    spec = next(pending, None)
+                    if spec is None:
+                        break
+                    batch.append(spec)
+                if not batch:
                     break
-                if attempt >= cfg['max_generation_attempts']:
-                    store.execute("UPDATE jobs SET status='exhausted',result=? WHERE id=?", (json.dumps(outcome,ensure_ascii=False),sid))
+                outcomes = list(pool.map(process, batch))
+                accepted_now += outcomes.count('accepted')
+                if 'deferred' in outcomes:
                     break
-                store.execute("UPDATE jobs SET attempt=attempt+1,draft=NULL,provenance=NULL,result=? WHERE id=?",(json.dumps(outcome,ensure_ascii=False),sid))
-                if cached.remaining <= 0:
-                    return report(folder, store)
         return report(folder, store)
     finally:
         store.close()

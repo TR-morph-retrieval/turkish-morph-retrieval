@@ -1,5 +1,6 @@
 {
-  "version": "train-v5-quality",
+  "version": "train-v6-structured",
+  "family_workers": 3,
   "composition_policy": {
     "chain_fraction": 0.30,
     "root_policy": "exclude_same_root_chain_pair"
