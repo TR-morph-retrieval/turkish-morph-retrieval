@@ -340,7 +340,8 @@ Veri:\n'''
 [{"candidate_id":"c0","checks":{"participants":true,"object":true,"event":true,
 "place":true,"time":true,"outcome":true},"evidence":"metinden kısa karşılaştırma"}].
 Altı alan query ile aynı bilgiyi koruyor mu? Eksilen zorunlu ayrıntı veya genişleyen
-kapsam false; belirsizse null. Hedef ekin kutupluluk/kip/kişi farkını event ve ilgili
+kapsam false. Her alan için metne dayalı true/false seç; güvenemiyorsan genel kararı
+abstain yap ama null veya eksik alan döndürme. Hedef ekin kutupluluk/kip/kişi farkını event ve ilgili
 alana yansıt. Negatifte false olması normaldir. relevant_ids yalnız bütün alanları
 true olan adaylardan oluşsun. Her ID tam bir kez değerlendirilsin.
 Veri:\n''')
@@ -352,8 +353,9 @@ target_valid: positive hedefi taşıyor; morph negatif belirtilen işlevi gerçe
 değiştiriyor mu? content_preserved: morph negatif yalnız hedefin zorunlu etkisini
 değiştirip diğer olguları koruyor mu? Positive için query anlamını koruyor mu?
 semantic_1 için target_valid/content_preserved uygulanmaz, true yaz; natural denetle.
-Morph_change üreticinin iddiasıdır; metinden doğrula. Kararsızsan null kullan.
-Her ID tam bir kez değerlendirilsin. Bu alanlar eksikse kabul edilmeyecek.
+Morph_change üreticinin iddiasıdır; metinden doğrula.
+Kararsızsan genel kararı abstain yap ama her kontrol alanında metne dayalı true/false
+seç; null kullanma. Her ID tam bir kez değerlendirilsin. Bu alanlar eksikse kabul edilmeyecek.
 Veri:\n''')
     return prompt + json.dumps(data, ensure_ascii=False)
 

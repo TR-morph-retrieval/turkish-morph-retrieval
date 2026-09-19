@@ -47,7 +47,7 @@ class Client:
         if settings['model'].startswith('google/'):
             value=fixture()
         else:
-            if settings['model'].startswith('deepseek/') and self.fail_once:
+            if not settings['model'].startswith('z-ai/') and self.fail_once:
                 self.fail_once=False
                 raise TransportError('temporary fixture failure')
             data=json.loads(prompt.split('Veri:\n')[1])

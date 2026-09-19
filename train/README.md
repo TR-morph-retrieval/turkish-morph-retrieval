@@ -1,6 +1,8 @@
 # Train üretimi: Gemini 3.8 Flash + iki bağımsız judge
 
-Generator ve GLM düşük reasoning ile çalışır; DeepSeek judge reasoning kapalıdır.
+Generator, Luna ve GLM düşük reasoning ile çalışır. Semantik judge GPT-5.6 Luna
+Flex'tir; normal Luna ile aynı modeldir, daha düşük öncelikli/değişken gecikmeli
+servis karşılığında daha düşük fiyat hedeflenir.
 Gemini için ucuz/Flex fiyat tavanı $0.375/M girdi ve $1.875/M çıktıdır;
 uygun endpoint yoksa pahalı standart sağlayıcıya sessiz geçilmez.
 GLM endpoint'i reasoning kapatmayı desteklemez (API 400 döndürür).
@@ -19,7 +21,7 @@ test query/adayları hiçbir generator veya judge promptuna gönderilmez.
 3. **Approve:** insan kontrolünün bittiği test sürümü checksum + isim ile onaylanır.
 4. **Gemini:** ortak olay bilgisi, query, tek ortak bağlam ve dört kritik aday cümlesi üretir; pasajları Python birleştirir.
 5. **Yerel guard:** schema, metin/kök sızıntısı, soru/bildirim ve strict minimal-pair kontrolü.
-6. **Paralel iki judge:** DeepSeek semantik turda etiketler gizli; GLM morfoloji turunda slot amaçlarını denetler.
+6. **Paralel iki judge:** Luna semantik turda etiketler gizli; GLM morfoloji turunda slot amaçlarını denetler.
 7. **Karar:** kabul / aday düzeltme / aynı kotada yeni family / teknik erteleme.
 8. **SQLite → JSONL:** güvenli devam, provenance, maliyet ve eğitim görünümü.
 
@@ -107,7 +109,7 @@ approve kaydı sorumlu kişinin açık beyanıdır.
 
 ## Judge politikası
 
-### Train-v6 kalite ve paralellik
+### Train-v7 kalite ve paralellik
 
 `family_workers=3`: en fazla üç family eşzamanlı ilerler; her biri ayrı generator
 çağrısıdır. Her family'nin iki judge'ı paralel çalışır (en fazla altı judge isteği).
@@ -207,10 +209,11 @@ Rapor yalnız telemetride dönen maliyeti toplar; eksik maliyet sayısını ayr�
 
 ## Provider / süre / maliyet
 
-Gemini 3.8 Flash low; DeepSeek V4 Flash 0731 reasoning kapalı isteği; GLM 5.3 Flash low.
+Gemini 3.8 Flash low/Flex; GPT-5.6 Luna low/Flex; GLM 5.3 Flash low.
 `exclude:true` reasoning'i kapatmaz, görünür yanıttan çıkarır. `sort:price` en ucuz uygun
 sağlayıcıyı önceliklendirir; fallback açık. Generator için milyon token başına $0.75 giriş /
-$3.75 çıkış tavanı vardır. Flex ile async Batch farklıdır; bu hat normal API kullanır.
+$3.75 çıkış; Luna için $0.10 giriş / $0.60 çıkış tavanı vardır. Flex ile async Batch
+farklıdır; bu hat senkron normal API isteğini düşük öncelikli Flex servisinde çalıştırır.
 Desteklenmeyen parametre sessizce atılmasın diye `require_parameters:true` kullanılır.
 
 Mantıksal çağrı başına en fazla 3 teknik deneme vardır; `length` token bütçesini en fazla
