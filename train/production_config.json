@@ -1,5 +1,6 @@
 {
-  "version": "train-v8-target-fidelity",
+  "version": "train-v18-balanced-pilot",
+  "generation_mode": "single",
   "family_workers": 3,
   "composition_policy": {
     "chain_fraction": 0.30,
@@ -7,7 +8,7 @@
   },
   "generator": {
     "model": "google/gemini-3.8-flash",
-    "service_tier": "flex",
+    "service_tier": "standard",
     "max_tokens": 5000,
     "reasoning": {"effort": "low", "exclude": true},
     "provider": {"sort": "price", "require_parameters": true, "allow_fallbacks": true,
@@ -16,23 +17,23 @@
   "judges": {
     "semantic": {
       "model": "openai/gpt-5.6-luna",
-      "service_tier": "flex",
-      "max_tokens": 3000,
+      "max_tokens": 1800,
       "reasoning": {"effort": "low", "exclude": true},
       "provider": {"sort": "price", "require_parameters": true, "allow_fallbacks": true,
-        "max_price": {"prompt": 0.1, "completion": 0.6}}
+        "max_price": {"prompt": 0.20, "completion": 1.20}}
     },
     "morphology": {
       "model": "z-ai/glm-5.3-flash",
-      "max_tokens": 3000,
+      "max_tokens": 1600,
       "reasoning": {"effort": "low", "exclude": true},
       "provider": {"sort": "latency", "ignore": ["Wafer"], "require_parameters": true, "allow_fallbacks": true,
         "max_price": {"prompt": 0.15, "completion": 0.5}}
     }
   },
   "confidence_threshold": 80,
-  "max_repairs": 1,
+  "pass_confidence_threshold": 70,
+  "max_repairs": 2,
   "max_judge_rounds": 2,
-  "max_generation_attempts": 3,
+  "max_generation_attempts": 4,
   "transport_attempts": 3
 }

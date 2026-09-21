@@ -52,7 +52,7 @@ def snapshot(source, expected=600):
     rows, sha = source_rows(source)
     if len(rows) != expected or len({x['family_id'] for x in rows}) != expected:
         raise ValueError(f'Expected {expected} unique protected families')
-    texts, lemmas, templates, chains, pairs = [], set(), set(), set(), set()
+    texts, lemmas, all_lemmas, templates, chains, pairs = [], set(), set(), set(), set(), set()
     shared_chains = [f['key'] for f in read_json(HERE/'catalog.json')['features']
                      if f.get('objective') == 'composition']
     chain_lemmas = {key: set() for key in shared_chains}
@@ -60,6 +60,9 @@ def snapshot(source, expected=600):
         if len(x['candidates']) != 11:
             raise ValueError('Invalid protected family candidate count')
         texts += [x['query']] + [c['text'] for c in x['candidates']]
+        all_lemmas.add(normalized(x['critical_lemma']))
+        all_lemmas.update(normalized(c['critical_lemma']) for c in x['candidates']
+                          if c.get('critical_lemma'))
         bucket = x['generalization_bucket']
         if bucket == 'lemma_holdout':
             lemmas.add(normalized(x['critical_lemma']))
@@ -75,7 +78,9 @@ def snapshot(source, expected=600):
         if 'domain_shift' in x.get('generalization_tags', []):
             pairs.add((x['domain'], x['register']))
     return {'source': str(Path(source).resolve()), 'source_sha256': sha, 'family_count': len(rows),
-            'texts': texts, 'forbidden_lemmas': sorted(lemmas), 'forbidden_templates': sorted(templates),
+            'texts': texts, 'forbidden_lemmas': sorted(lemmas),
+            'all_test_critical_lemmas': sorted(all_lemmas),
+            'forbidden_templates': sorted(templates),
             'lemma_exclusion_scope': 'target_critical_words_only',
             'chain_forbidden_lemmas': {key: sorted(values) for key, values in chain_lemmas.items()},
             'chain_protection_version': 2,
@@ -231,9 +236,13 @@ class Guard:
                     current = set(normalized(candidate.get('critical_sentence', '')).split())
                     base.discard(normalized(positive.get('critical_word', '')))
                     current.discard(normalized(candidate.get('critical_word', '')))
-                    # Morph targets may legitimately trigger a small syntactic rewrite.
-                    # Reject only an obvious non-target content break; judges assess the closer cases.
-                    if len(base & current) / max(1, len(base | current)) < 0.45:
+                    # The critical surface form may change, but objects, names and
+                    # the rest of the proposition must not quietly drift. A 0.50
+                    # token Jaccard floor permits a natural Turkish rewording or
+                    # syntactic repair, while still blocking a replaced event/object
+                    # such as susam→çörek otu.
+                    if (spec['target_feature'] != 'MORPH.CONTEXT_AMBIG'
+                            and len(base & current) / max(1, len(base | current)) < 0.50):
                         errors.append(f"quality:{candidate['slot']}:non_target_content_drift")
                 if candidate['slot'] == 'morph_1' and spec['family_mode'] == 'strict_minimal':
                     if candidate.get('critical_lemma') != positive.get('critical_lemma'):
@@ -245,15 +254,23 @@ class Guard:
                         errors.append('quality:morph_1:strict_non_target_edit')
         if any(self.index.overlaps(t) for t in texts):
             errors.append('leakage:protected_or_accepted_text_overlap')
-        critical = [(item.get('query_critical_word'), item.get('query_critical_lemma'), item.get('query_critical_sentence'), item['query'])]
-        critical += [(c.get('critical_word'), c.get('critical_lemma'), c.get('critical_sentence'), c['text']) for c in item['candidates']]
+        critical = [('query', item.get('query_critical_word'), item.get('query_critical_lemma'),
+                     item.get('query_critical_sentence'), item['query'])]
+        critical += [(c.get('slot'), c.get('critical_word'), c.get('critical_lemma'),
+                      c.get('critical_sentence'), c['text']) for c in item['candidates']]
         forbidden = set(self.protected['forbidden_lemmas'])
         chain_roots = set(self.protected.get('chain_forbidden_lemmas', {}).get(spec['target_feature'], []))
-        for word, lemma, sentence, text in critical:
+        for slot, word, lemma, sentence, text in critical:
+            if slot == 'semantic_1':
+                if not isinstance(sentence, str) or not sentence.strip() or sentence not in sentence_parts(text):
+                    errors.append('metadata:semantic_1:critical_sentence_not_in_text')
+                if isinstance(sentence, str) and (('?' in sentence) != (spec['target_feature'] == 'Q.PART.SCOPE')):
+                    errors.append('plan:question_vs_statement')
+                continue
             if not all(isinstance(v, str) and v.strip() for v in [word, lemma, sentence]):
-                errors.append('metadata:missing_critical_annotation'); continue
+                errors.append(f'metadata:{slot}:missing_critical_annotation'); continue
             if normalized(word) not in normalized(sentence).split() or sentence not in sentence_parts(text):
-                errors.append('metadata:critical_annotation_not_in_text')
+                errors.append(f'metadata:{slot}:critical_annotation_not_in_text')
             if normalized(lemma) in forbidden:
                 errors.append('leakage:heldout_lemma')
             if normalized(lemma) in chain_roots:
@@ -264,7 +281,9 @@ class Guard:
             if ('?' in sentence) != (spec['target_feature'] == 'Q.PART.SCOPE'):
                 errors.append('plan:question_vs_statement')
         # Target-lemma holdout: incidental context words are NOT globally banned.
-        words = {w for word, lemma, sentence, text in critical if isinstance(word, str) for w in normalized(word).split()}
+        words = {w for slot, word, lemma, sentence, text in critical
+                 if slot != 'semantic_1' and isinstance(word, str)
+                 for w in normalized(word).split()}
         if any(w == lemma or (len(lemma) >= 4 and w.startswith(lemma)) for w in words for lemma in forbidden):
             errors.append('leakage:heldout_lemma_surface_match')
         return sorted(set(errors))
@@ -344,7 +363,9 @@ class CachedClient:
 
 def contract(cfg, protected, plan):
     # Exact source identity ensures different code/config cannot silently resume the run.
-    sources = {p.name: digest(p.read_text()) for p in [HERE/'production.py', HERE/'workflow.py', HERE/'catalog.json']}
+    sources = {p.name: digest(p.read_text()) for p in [
+        HERE/'production.py', HERE/'workflow.py', HERE/'catalog.json',
+        HERE/'generation_guides.json', HERE/'lemma_pool.json']}
     return digest({'sources': sources, 'config': cfg, 'protected': protected, 'plan': plan})
 
 
@@ -388,9 +409,28 @@ def approve(folder, source_sha, reviewer):
 
 
 def generation_spec(spec, protected, attempt):
-    return {**spec, 'attempt': attempt,
+    pool = read_json(HERE/'lemma_pool.json')
+    guides = read_json(HERE/'generation_guides.json')
+    blocked = set(protected.get('all_test_critical_lemmas', []))
+    blocked.update(protected.get('chain_forbidden_lemmas', {}).get(spec['target_feature'], []))
+    rng = random.Random(int(digest([spec['slot_id'], spec['target_feature']])[:16], 16))
+    choices = []
+    for pos in ('VERB', 'NOUN'):
+        values = [lemma for lemma in pool[pos] if normalized(lemma) not in blocked]
+        rng.shuffle(values)
+        choices += [{'lemma': lemma, 'pos': pos} for lemma in values[:5]]
+    objective_guides = {
+        'composition': {'contract': 'Positive tanımlanan ek zincirinin bütün halkalarını taşır. Morph_1 ve morph_2 aynı fiil kökü, olay ve katılımcılarla zincirin farklı birer halkasını düşürür veya değiştirir; diğer halkalar korunur. Sonuç mutlaka doğal Türkçedir.'},
+        'allomorph_invariance': {'contract': 'Query ve positive aynı dilbilgisel işlevin bağlama uygun farklı yüzey biçimlerini taşır. Morph hard aynı lemma ve olayda yüzey biçimini değil işlevi değiştirir; eşdeğer allomorf asla negatif yapılmaz.'},
+        'morpheme_sensitivity': {'contract': 'Positive hedef anlamı taşır. Morph hard aynı lemma, olay ve katılımcılarla yalnız hedef morfolojik işlevi değiştirir; sözdizimi değişen biçimin doğal kullanımına gerektiği kadar uyarlanır.'},
+    }
+    guide = guides.get(spec['target_feature'], objective_guides.get(
+        spec['feature'].get('objective'), {
+            'contract': 'Positive hedef özelliği taşır. Her morph hard aynı lemma ve olayda yalnız bir planlı morfolojik işlevi değiştirir; morph_change bu tek değişimi doğru yazar.'}))
+    return {**spec, 'attempt': attempt, 'preferred_novel_lemmas': choices,
+            'feature_generation_guide': guide,
             'required_metadata': 'template_id, domain, register; query_critical_word, query_critical_lemma, query_critical_sentence; each candidate critical_word, critical_lemma, critical_sentence',
-            'instructions': 'Plan alanları ve sayıları aynen koru. Ek cümleler doğal bağlam olsun. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim. Test koruma listeleri prompta verilmez; bunlar yerel guard tarafından denetlenir.'}
+            'instructions': 'Plan alanları ve sayıları aynen koru. preferred_novel_lemmas içinden hedefe uygun iki farklı lemma seç: biri query, biri positive+morph adayları için; morph_1/morph_2 positive ile aynı lemma ve POS kullanır. semantic_1 serbesttir. Ek cümleler doğal bağlam olsun. Her kritik cümle tam bir cümle ve metnin parçası olmalı. strict_minimal modunda positive ile morph_1 sadece bir hedef sözcükte farklı, aynı lemma olmalı. Q.PART.SCOPE kritik cümleleri soru; diğerleri bildirim. Test koruma listeleri prompta verilmez; yalnız testte bulunmadığı Python tarafından doğrulanmış lemma seçenekleri verilir.'}
 
 
 def other_run_memory(folder):
@@ -438,6 +478,13 @@ def generate_run(folder, client, limit=10, max_calls=30, range_from=None, range_
                             for stage in prior.get('events', [])
                             for finding in stage.get('findings', [])
                             if isinstance(finding, dict) and isinstance(finding.get('reason'), str)]
+                        previous_family = prior.get('family') or {}
+                        previous_lemmas = [previous_family.get('query_critical_lemma')]
+                        previous_lemmas += [c.get('critical_lemma')
+                                            for c in previous_family.get('candidates', [])]
+                        request_spec['do_not_reuse_previous_critical_lemmas'] = sorted({
+                            normalized(x) for x in previous_lemmas
+                            if isinstance(x, str) and x.strip()})
                     item, prov = generate_family(cached, cfg, request_spec)
                     store.execute('UPDATE jobs SET draft=?,provenance=? WHERE id=?', (json.dumps(item,ensure_ascii=False), json.dumps(prov), sid))
                 else:

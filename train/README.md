@@ -1,10 +1,9 @@
 # Train üretimi: Gemini 3.8 Flash + iki bağımsız judge
 
-Generator, Luna ve GLM düşük reasoning ile çalışır. Semantik judge GPT-5.6 Luna
-Flex'tir; normal Luna ile aynı modeldir, daha düşük öncelikli/değişken gecikmeli
-servis karşılığında daha düşük fiyat hedeflenir.
-Gemini için ucuz/Flex fiyat tavanı $0.375/M girdi ve $1.875/M çıktıdır;
-uygun endpoint yoksa pahalı standart sağlayıcıya sessiz geçilmez.
+Generator Gemini 3.8 Flash düşük reasoning ile çalışır; semantik judge GPT-5.6 Luna,
+morfoloji judge'ı GLM 5.3 Flash düşük reasoning kullanır. Train generator'ı,
+test üreticisinden farklı bir model ailesidir. Gemini için Flex tavanı $0.375/M girdi
+ve $1.875/M çıktıdır; uygun endpoint yoksa pahalı standart sağlayıcıya sessiz geçilmez.
 GLM endpoint'i reasoning kapatmayı desteklemez (API 400 döndürür).
 GLM sağlayıcı seçiminde Wafer dışlanır; hız önceliklidir ve fiyat üst sınırı
 $0.15/M girdi, $0.50/M çıktıdır. Negatiflerin ilgisizliği judge hatası sayılmaz;
@@ -52,13 +51,16 @@ bu tam morfolojik çözümleme veya tüm yüzey varyantları için eksiksiz koru
 Eski snapshot/planlar yeni politikayla devam ettirilmez; yeniden prepare gerekir.
 Ham test metinleri LLM'lere gönderilmez. Snapshot hazırlama ve kaynak checksum kontrolü
 yerelde test dosyalarını okur; bu, tamamen test dosyasına erişimsiz bir hat değildir.
+Generator'a ham test kökleri de verilmez. Python, sürümlü `lemma_pool.json` içinden
+testte hiç görünmeyen küçük bir seçenek kümesi çıkarır; model yalnız bu güvenli seçenekleri
+görür. İçerik negatifinin alakasız kritik lemması lemma-holdout hedefi sayılmaz.
 Bu değişiklik sealed test dosyalarını/split'lerini değiştirmez; eski composition_holdout
 etiketleri tarihsel plan metadata'sıdır. Bu train ile görülen zincirler için paper'da
 "unseen-chain zero-shot" iddiası kurulmaz. Kök–zincir grupları ayrıca doğrulanıp raporlanır.
 Kota train'e aittir; testin aday sayısı veya split'i bu kod tarafından değiştirilmez.
-Şu an bu hat ayrı validation üretmez. Yalnız açıkça development olarak ayrılmış veriyle
-ayar yapılmalıdır; bütün 600 sealed ise eğitim deneyinden önce ayrıca bağımsız validation
-planlanmalıdır. Sealed örneklerle hiperparametre seçilmez.
+Fine-tuning notebook'u final train içinden family-id hash'iyle sabit `%90 train / %10
+development` ayırır. Bütün 600 test kaydı sealed kalır; notebook'ta varsayılan olarak
+kapalıdır ve model/hiperparametre seçimi için kullanılmaz.
 
 ## Komutlar (repo kökünden)
 
@@ -92,6 +94,10 @@ python3 train/workflow.py run --run-id pilot1000 --limit 10 --max-calls 30
 
 # Aynı komutla devam: kabul edilen slotlar atlanır.
 python3 train/workflow.py export --run-id pilot1000
+
+# Her yeni pilot kabulünü büyüyen pilot havuzuna ekle (kaynak run değişmez).
+python3 train/pilot_report.py merge --runs pilot5_train_v19 \
+  --existing train/data/pilot/pilot40.jsonl --output train/data/pilot/pilot45.jsonl
 
 # Ekipçe sırayla üretim: önceki shard'ları çek/senkronize et, yalnız kendi aralığını üret.
 python3 train/workflow.py shard-sync --run-id train1000 --shard-dir train/data/shards
@@ -149,8 +155,13 @@ karşılaştırır. Morfoloji judge slotları görür, fakat bunları doğru kab
 hedefi, her morph-hard'ın hedef işlev farkını, doğallığını ve hedef dışı içerik değişimini
 denetler. Böylece içerik negatifi ile yanlış üretilmiş morph-hard ayrılır. Bu tur kör
 relevance oylaması değildir. İki judge mevcut çağrılarında bu kontrolleri yapar;
-ek judge veya ek zorunlu API turu eklenmemiştir. Generator low/Flex olarak kalır.
+ek judge veya ek zorunlu API turu eklenmemiştir. Generator Gemini low olarak kalır.
 Eski pilot kalite onayı sayılmaz; yeni kurallar gerçek pilotla ayrıca ölçülmelidir.
+Yerel guard tek bir candidate slotuna bağlanabilen lemma/POS/strict-pair hatasını
+judge çağrısından önce yalnız o slotta onarır. Leakage veya query/family hataları patch
+edilmez. Yeniden üretilen family önceki denemede seçtiği kritik lemmaları tekrar kullanmaz.
+Morph hard'larda hedef sözcük dışındaki kritik-cümle token örtüşmesi en az `%65` olmalıdır
+(context ambiguity hariç); böylece nesne/katılımcı kayması yerel olarak elenir.
 Kod sözleşmesi değiştiğinden eski run sessizce devam etmez, yeni prepare gerekir.
 
 - İkisi de **pass** → kabul; confidence tek başına ret nedeni değildir.
@@ -170,7 +181,10 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
 
 - Semantic judge, positive için query'deki altı bilgi alanını (`positive_fact_coverage`)
   ayrı ayrı raporlar; biri false veya belirsizse family kabul edilmez.
-- `pass` confidence değeri 80'in altındaysa kabul edilmez, yeni judge turu istenir.
+- Somut hata bildirimi için eşik `%80`dir. İki judge da `pass` verirse `%70–79`
+  arası karar güveni kabulü engellemez; `%70` altı gerçekten belirsiz pass bir kez
+  yeniden değerlendirilir. Bu ayrım, iyi family'leri salt ihtiyatlı ifade yüzünden
+  gereksiz yeniden üretmemek içindir.
 - Morphology judge'ın `natural=false` kararı veya düşük güvenli PASS sonucu family'yi
   yeniden değerlendirmeye gönderir; yalnız sorunlu aday patch edilir.
 - Morph adaylarının lemma/POS bilgisi positive ile aynı hedef sözcükte kalmalı; kritik
@@ -237,11 +251,12 @@ Rapor yalnız telemetride dönen maliyeti toplar; eksik maliyet sayısını ayr�
 
 ## Provider / süre / maliyet
 
-Gemini 3.8 Flash low/Flex; GPT-5.6 Luna low/Flex; GLM 5.3 Flash low.
+Gemini 3.8 Flash low/Flex; GPT-5.6 Luna low; GLM 5.3 Flash low.
 `exclude:true` reasoning'i kapatmaz, görünür yanıttan çıkarır. `sort:price` en ucuz uygun
-sağlayıcıyı önceliklendirir; fallback açık. Generator için milyon token başına $0.75 giriş /
-$3.75 çıkış; Luna için $0.10 giriş / $0.60 çıkış tavanı vardır. Flex ile async Batch
-farklıdır; bu hat senkron normal API isteğini düşük öncelikli Flex servisinde çalıştırır.
+sağlayıcıyı önceliklendirir; fallback açık. Gemini generator için milyon token başına
+$0.375 giriş / $1.875 çıkış Flex tavanı vardır. Luna semantic judge kısa, yapılandırılmış
+karar verir; GLM morfoloji judge'ı düşük maliyetlidir.
+Çağrılar senkron OpenRouter API üzerinden yapılır.
 Desteklenmeyen parametre sessizce atılmasın diye `require_parameters:true` kullanılır.
 
 Mantıksal çağrı başına en fazla 3 teknik deneme vardır; `length` token bütçesini en fazla

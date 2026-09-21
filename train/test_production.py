@@ -45,10 +45,12 @@ class FakeClient:
         self.mode, self.patches = mode, 0
 
     def call(self, settings, prompt):
-        if settings['model'].startswith('google/'):
+        if prompt.startswith('Türkçe retrieval train family içindeki yalnız belirtilen aday slotlarını düzelt.'):
             self.patches += 1
-            slot = 'positive' if self.mode == 'unauthorized_patch' else 'morph_1'
-            return {'patches': [{'slot': slot, 'critical_sentence': 'Bora parayı dün iade etti.'}]}, {}
+            patches = [{'slot': 'morph_1', 'critical_sentence': 'Bora parayı dün iade etti.'}]
+            if self.mode == 'unauthorized_patch':
+                patches.append({'slot': 'positive', 'critical_sentence': 'Yetkisiz değişiklik.'})
+            return {'patches': patches}, {}
         if self.mode == 'transport':
             raise TransportError('offline failure')
         data = json.loads(prompt.split('Veri:\n')[1])
@@ -109,6 +111,14 @@ class ProductionTests(unittest.TestCase):
         out = materialize(f)
         self.assertTrue(all(c['text'] == 'Nötr bağlam. ' + c['critical_sentence'] for c in out['candidates']))
         self.assertEqual(materialize(out), out)
+
+    def test_context_ambiguity_requires_the_same_surface_word(self):
+        f = deepcopy(FAMILY)
+        f['target_feature'] = 'MORPH.CONTEXT_AMBIG'
+        f['candidates'][0]['critical_word'] = 'yazar'
+        f['candidates'][1]['critical_word'] = 'yazar'
+        f['candidates'][2]['critical_word'] = 'yazdı'
+        self.assertIn('morph_2:context_ambiguity_surface_not_preserved', validate_family(f))
     def test_role_visibility_is_scoped_to_morphology(self):
         semantic = json.loads(judge_prompt(FAMILY, 'semantic', FAMILY['candidates']).split('Veri:\n')[1])
         morphology = json.loads(judge_prompt(FAMILY, 'morphology', FAMILY['candidates']).split('Veri:\n')[1])
@@ -118,6 +128,12 @@ class ProductionTests(unittest.TestCase):
     def test_threshold(self):
         self.assertEqual(policy({'semantic':report(confidence=80), 'morphology':report(confidence=80)}, {'c0'})['action'], 'accept')
         self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'retry')
+
+    def test_widespread_failure_regenerates_instead_of_patching_every_slot(self):
+        findings = [{'candidate_id': f'c{i}', 'reason': 'Yaygın hata'} for i in range(3)]
+        bad = report('fail', 90, findings)
+        decision = policy({'semantic': bad, 'morphology': report()}, {'c0','c1','c2'})
+        self.assertEqual(decision['action'], 'regenerate')
 
     def test_invalid_reports(self):
         for bad in [{}, report(confidence=True), report(confidence=float('nan')), report('fail'),
@@ -142,15 +158,39 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(out['family']['candidates'][0], FAMILY['candidates'][0])
         self.assertEqual(FAMILY['candidates'][1]['text'], 'Bora parayı iade etti.')
 
-    def test_unflagged_patch(self):
-        self.assertEqual(evaluate(FAMILY, FakeClient('unauthorized_patch'), load_config(), lambda x:[])['reason'], 'invalid_repair_patch')
+    def test_local_candidate_error_repairs_only_that_slot(self):
+        calls = 0
+        def guard(_):
+            nonlocal calls
+            calls += 1
+            return ['quality:morph_1:strict_non_target_edit'] if calls == 1 else []
+        out = evaluate(FAMILY, FakeClient(), load_config(), guard)
+        self.assertEqual(out['status'], 'accepted')
+        self.assertEqual(out['repairs'], 1)
+        repair = next(e for e in out['events'] if e.get('stage') == 'repair')
+        self.assertEqual(repair['trigger'], 'local_validation')
+        self.assertEqual(repair['slots'], ['morph_1'])
+        self.assertEqual(out['family']['candidates'][0], FAMILY['candidates'][0])
+
+    def test_unflagged_patch_is_ignored(self):
+        out = evaluate(FAMILY, FakeClient('unauthorized_patch'), load_config(), lambda x:[])
+        self.assertEqual(out['status'], 'accepted')
+        repair = next(e for e in out['events'] if e.get('stage') == 'repair')
+        self.assertEqual(repair['ignored_unrequested_slots'], ['positive'])
+        self.assertEqual(out['family']['candidates'][0], FAMILY['candidates'][0])
 
     def test_bounded_repairs(self):
         out=evaluate(FAMILY, FakeClient('always_fail'), load_config(), lambda x:[])
         self.assertEqual(out['status'], 'rejected'); self.assertEqual(out['repairs'], 1)
 
-    def test_uncertain(self):
-        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'rejected')
+    def test_adequately_confident_pass_is_not_retried(self):
+        self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'accepted')
+
+    def test_moderately_confident_double_pass_is_accepted(self):
+        semantic = report(); morphology = report()
+        semantic['confidence'] = morphology['confidence'] = 72
+        self.assertEqual(policy({'semantic': semantic, 'morphology': morphology},
+                                {'c0': 'positive'}, 80, 70)['action'], 'accept')
 
     def test_blind_relevance(self):
         self.assertNotEqual(evaluate(FAMILY, FakeClient('blind_mismatch'), load_config(), lambda x:[])['status'], 'accepted')

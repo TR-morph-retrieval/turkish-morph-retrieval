@@ -66,6 +66,40 @@ def bundle(names, output):
     return data
 
 
+def merge_pilot(existing, names, output, exclude_slots=None):
+    """Append accepted pilot rows once, retaining each run's full provenance.
+
+    Pilot files are intentionally separate from final-train exports.  This command
+    makes a growing read-only-ish pilot snapshot without mutating a source run.
+    """
+    records = []
+    if existing.exists():
+        records = [json.loads(line) for line in existing.read_text(encoding='utf-8').splitlines()
+                   if line.strip()]
+    seen = {row.get('pilot_review_id') or row.get('family', {}).get('family_id') for row in records}
+    for name in names:
+        folder = ROOT / name
+        db = sqlite3.connect((folder / 'state.sqlite3').resolve().as_uri() + '?mode=ro', uri=True)
+        try:
+            for slot_id, payload in db.execute("SELECT id,result FROM jobs WHERE status='accepted' ORDER BY id"):
+                if exclude_slots and slot_id in exclude_slots:
+                    continue
+                row = json.loads(payload)
+                review_id = f'{name}:{slot_id}'
+                if review_id in seen:
+                    continue
+                records.append(_pilot_jsonl_record({'review_id': review_id,
+                                                    'source_run': name, 'record': row}))
+                seen.add(review_id)
+        finally:
+            db.close()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp = output.with_suffix(output.suffix + '.tmp')
+    tmp.write_text(''.join(json.dumps(row, ensure_ascii=False) + '\n' for row in records), encoding='utf-8')
+    tmp.replace(output)
+    return {'path': str(output), 'families': len(records), 'added_runs': names}
+
+
 def render(output):
     data = json.loads((output / 'data.json').read_text())
     audit_path = output / 'sol_review.json'
@@ -94,14 +128,20 @@ def render(output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['bundle', 'html'])
+    parser.add_argument('action', choices=['bundle', 'html', 'merge'])
     parser.add_argument('--runs', nargs='+', default=['pilot5_v4'])
     parser.add_argument('--output', default='pilot_review')
+    parser.add_argument('--existing', type=Path)
+    parser.add_argument('--exclude-slots', nargs='*', default=[])
     args = parser.parse_args()
-    if Path(args.output).name != args.output or args.output in {'.', '..'}:
+    if args.action != 'merge' and (Path(args.output).name != args.output or args.output in {'.', '..'}):
         parser.error('Output must be one folder name')
     output = ROOT / args.output
-    if args.action == 'bundle':
+    if args.action == 'merge':
+        if args.existing is None:
+            parser.error('--existing current_pilot.jsonl is required for merge')
+        print(json.dumps(merge_pilot(args.existing, args.runs, Path(args.output), set(args.exclude_slots)), ensure_ascii=False))
+    elif args.action == 'bundle':
         print(len(bundle(args.runs, output)['records']))
     else:
         render(output); print(output / 'pilot.html')

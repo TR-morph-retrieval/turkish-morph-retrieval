@@ -46,7 +46,7 @@ class Client:
 
     def call(self, settings, prompt):
         self.calls+=1
-        if settings['model'].startswith('google/'):
+        if 'Train slotu:\n' in prompt:
             value=fixture()
         else:
             if not settings['model'].startswith('z-ai/') and self.fail_once:
@@ -114,6 +114,13 @@ class WorkflowTests(unittest.TestCase):
         errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
         self.assertIn('quality:morph_1:context_changed', errors)
         self.assertIn('quality:morph_2:context_changed', errors)
+
+    def test_morph_hard_cannot_replace_an_unrelated_object(self):
+        item = fixture()
+        item['candidates'][1]['critical_sentence'] = 'Suna dün pazarda taze çörek otu topladı.'
+        item['candidates'][1]['text'] = item['candidates'][1]['critical_sentence']
+        errors = Guard({'texts': [], 'forbidden_lemmas': []}).check(item, SPEC)
+        self.assertIn('quality:morph_1:non_target_content_drift', errors)
 
     def test_planned_sentence_counts_are_enforced(self):
         item = fixture(); item['context_sentences'] = ['Nötr bağlam.']

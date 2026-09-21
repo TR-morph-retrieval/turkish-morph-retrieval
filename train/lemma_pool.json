@@ -1,0 +1,18 @@
+{
+  "VERB": [
+    "cilala", "lehimle", "perçinle", "törpüle", "zımparala", "mayala", "demle", "harmanla",
+    "buda", "mühürle", "çerçevele", "etiketle", "havalandır", "arındır", "parlat", "gölgele",
+    "sabitle", "gevşet", "sıkıştır", "yuvarla", "çalkala", "süz", "rendele", "öğüt", "kavur",
+    "serp", "kazı", "oy", "döşe", "sıva", "tara", "ör", "yamala", "ütüle", "tart", "çivile",
+    "kopçala", "fırçala", "zımbala", "menteşele", "katla", "paketle", "kurut", "nemlendir",
+    "çözündür", "hızlandır", "yavaşlat", "damıt", "köpürt", "kalayla"
+  ],
+  "NOUN": [
+    "çömlek", "pervane", "mandal", "yelken", "makara", "kiler", "panjur", "çınar", "pusula",
+    "eyer", "mozaik", "tulum", "palet", "pergel", "kürek", "fener", "düdük", "elek", "testi",
+    "mendirek", "iskele", "sepet", "tokmak", "maşa", "kevgir", "rende", "örs", "makas",
+    "çengel", "kasnak", "fitil", "şamandıra", "çıkrık", "mıknatıs", "dürbün", "semer", "kavanoz",
+    "fıçı", "küfe", "künk", "sarkaç", "tente", "sundurma", "oluk", "payanda", "mertek",
+    "kiriş", "peron", "vagon", "rıhtım"
+  ]
+}

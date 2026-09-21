@@ -1,0 +1,22 @@
+{
+  "CVB.BY": {
+    "contract": "Positive -arak/-erek ile araç veya yapılış tarzı bildirir. Morph hard aynı lemma ve aynı olayda ulaç işlevini değiştirir; örneğin -ken eşzamanlılık, -madan yokluk bildirir. Cümle doğal kalır ve sözlüksel yöntem/nesne değişmez.",
+    "shape_example": "ovarak (araç/tarz) → ovarken (eşzamanlılık) veya ovmadan (eylemin yokluğu)"
+  },
+  "ABST": {
+    "contract": "Positive -lık/-lik ile soyut nitelik, durum veya görev adı taşır. Morph hard aynı kökte somut kişi/varlık ya da başka türetim okumasına geçer; cümlenin sözdizimi yeni biçime göre doğal kurulur.",
+    "shape_example": "ustalık (soyut nitelik) → usta (somut kişi)"
+  },
+  "CAUS.PASS.NEG": {
+    "contract": "Positive aynı fiil kökünde ettirgen+edilgen+olumsuz zincirin üçünü de taşır. Morph_1 yalnız ettirgen halkayı, morph_2 yalnız olumsuzluk ya da edilgen halkayı değiştirir; diğer olay rolleri zorunlu uyarlama dışında sabit kalır.",
+    "shape_example": "aç-tır-ıl-ma-dı → aç-ıl-ma-dı (CAUS düşer) veya aç-tır-ıl-dı (NEG düşer)"
+  },
+  "MORPH.CONTEXT_AMBIG": {
+    "contract": "Positive ve morph hard aynı yüzey sözcüğünü içerir; bu sözcüğün iki bağlamda farklı sözcük türü veya morfolojik çözümlemesi vardır. Positive query ile aynı çözümlemeyi ve olayı korur. Morph hard aynı yüzey biçimini kullanır ama bağlamı diğer çözümlemeyi zorunlu kılar; yalnız zaman, yüklem ya da serbest içerik değişimi bu fenomen değildir.",
+    "shape_example": "yazar: 'Her ay makale yazar.' (VERB) ↔ 'Ödüllü yazar fuara geldi.' (NOUN)"
+  },
+  "COP.TAM": {
+    "contract": "Positive isim yüklemde seçilen ek-fiil zaman/kanıtsallık değerini taşır. Morph hard yalnız -ydı/-ymış/-ysa karşıtlığını değiştirir; aynı kişi, nesne, yer ve ana önerme korunur. Yeni bağımsız sonuç, emir veya açıklama cümlesi ekleme; koşul biçimi seçilirse ana önerme de koşula doğal biçimde uyarlanmalı ama olay genişlememelidir.",
+    "shape_example": "Kapı mühürlüydü. → Kapı mühürlüymüş. / Kapı mühürlüyse giriş yasaktır."
+  }
+}
