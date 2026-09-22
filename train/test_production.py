@@ -36,6 +36,7 @@ def add_checks(verdict, data, morphology=False):
         {'candidate_id': c['candidate_id'],
          'checks': {k: (True if morphology or k != 'event' else c['candidate_id'] in verdict.get('relevant_ids', [])) for k in keys},
          **({'observed_feature': 'NEG karşıtlığı'} if morphology else {}),
+         **({} if morphology else {'natural': True}),
          'evidence': 'Synthetic fixture comparison'} for c in data['candidates']]
     return verdict
 
@@ -85,6 +86,7 @@ class ProductionTests(unittest.TestCase):
             else:
                 checks['event'] = False
             v['candidate_checks'].append({'candidate_id':cid, 'checks':checks,
+                                          'natural': True,
                                           'evidence':'Sığınak yerine zirve yazılmış.'})
         self.assertEqual(checked_verdict(v, 'semantic', ids), {})
         add_checks(v, {'candidates':[{'candidate_id':'c0'}]})
@@ -127,13 +129,36 @@ class ProductionTests(unittest.TestCase):
 
     def test_threshold(self):
         self.assertEqual(policy({'semantic':report(confidence=80), 'morphology':report(confidence=80)}, {'c0'})['action'], 'accept')
-        self.assertEqual(policy({'semantic':report(confidence=79), 'morphology':report()}, {'c0'})['action'], 'retry')
+        self.assertEqual(policy({'semantic':report(confidence=78), 'morphology':report()}, {'c0'}, 80, 85)['action'], 'human_review')
+        self.assertEqual(policy({'semantic':report('abstain'), 'morphology':report()}, {'c0'}, 80, 85)['action'], 'retry')
 
     def test_widespread_failure_regenerates_instead_of_patching_every_slot(self):
         findings = [{'candidate_id': f'c{i}', 'reason': 'Yaygın hata'} for i in range(3)]
         bad = report('fail', 90, findings)
         decision = policy({'semantic': bad, 'morphology': report()}, {'c0','c1','c2'})
         self.assertEqual(decision['action'], 'regenerate')
+
+    def test_pass_fail_disagreement_is_accepted_with_review_flag(self):
+        class DisagreeingClient(FakeClient):
+            def call(self, settings, prompt):
+                value, provenance = super().call(settings, prompt)
+                if settings['model'].startswith('z-ai/') and 'decision' in value:
+                    cid = value['candidate_checks'][1]['candidate_id']
+                    value['candidate_checks'][1]['checks']['natural'] = False
+                    value['decision'] = 'fail'
+                    value['findings'] = [{'candidate_id': cid, 'reason': 'Doğallık kuşkusu'}]
+                return value, provenance
+        out = evaluate(FAMILY, DisagreeingClient(), load_config(), lambda x: [])
+        self.assertEqual(out['status'], 'accepted')
+        self.assertEqual(out['train_decision'], 'human_review')
+        self.assertEqual(out['review_reason'], 'judge_decision_disagreement')
+
+    def test_naturalness_disagreement_is_review_flagged(self):
+        ids = {'c0': 'positive'}
+        semantic = report(); semantic['candidate_checks'] = [{'candidate_id': 'c0', 'natural': False}]
+        morphology = report(); morphology['candidate_checks'] = [{'candidate_id': 'c0', 'checks': {'natural': True}}]
+        self.assertEqual(policy({'semantic': semantic, 'morphology': morphology}, ids, 80, 85),
+                         {'action': 'human_review', 'reason': 'judge_naturalness_disagreement'})
 
     def test_invalid_reports(self):
         for bad in [{}, report(confidence=True), report(confidence=float('nan')), report('fail'),
@@ -186,11 +211,24 @@ class ProductionTests(unittest.TestCase):
     def test_adequately_confident_pass_is_not_retried(self):
         self.assertEqual(evaluate(FAMILY, FakeClient('uncertain'), load_config(), lambda x:[])['status'], 'accepted')
 
-    def test_moderately_confident_double_pass_is_accepted(self):
+    def test_low_confidence_double_pass_enters_train_with_review_metadata(self):
+        class LowConfidenceClient(FakeClient):
+            def call(self, settings, prompt):
+                value, provenance = super().call(settings, prompt)
+                if 'decision' in value:
+                    value['confidence'] = 65
+                return value, provenance
+        out = evaluate(FAMILY, LowConfidenceClient(), load_config(), lambda x:[])
+        self.assertEqual(out['status'], 'accepted')
+        self.assertEqual(out['train_decision'], 'human_review')
+        self.assertEqual(out['review_reason'], 'low_confidence_pass')
+        self.assertEqual(out['judge_confidence'], {'semantic': 65, 'morphology': 65})
+
+    def test_moderately_confident_double_pass_is_review_flagged(self):
         semantic = report(); morphology = report()
         semantic['confidence'] = morphology['confidence'] = 72
         self.assertEqual(policy({'semantic': semantic, 'morphology': morphology},
-                                {'c0': 'positive'}, 80, 70)['action'], 'accept')
+                                {'c0': 'positive'}, 80, 85)['action'], 'human_review')
 
     def test_blind_relevance(self):
         self.assertNotEqual(evaluate(FAMILY, FakeClient('blind_mismatch'), load_config(), lambda x:[])['status'], 'accepted')
@@ -210,7 +248,7 @@ class ProductionTests(unittest.TestCase):
         first=json.loads(call.call_args_list[0].args[0].data)
         second=json.loads(call.call_args_list[1].args[0].data)
         self.assertEqual(first['provider']['sort'], 'price')
-        self.assertTrue(first['provider']['require_parameters'])
+        self.assertNotIn('require_parameters', first['provider'])
         self.assertEqual(second['max_tokens'], first['max_tokens']*2)
 
     def test_length_exhaustion_is_transport(self):

@@ -1,5 +1,5 @@
 {
-  "version": "train-v18-balanced-pilot",
+  "version": "train-v21-judge-disagreement-flags",
   "generation_mode": "single",
   "family_workers": 3,
   "composition_policy": {
@@ -8,11 +8,9 @@
   },
   "generator": {
     "model": "google/gemini-3.8-flash",
-    "service_tier": "standard",
     "max_tokens": 5000,
     "reasoning": {"effort": "low", "exclude": true},
-    "provider": {"sort": "price", "require_parameters": true, "allow_fallbacks": true,
-      "max_price": {"prompt": 0.375, "completion": 1.875}}
+    "provider": {"sort": "price", "allow_fallbacks": true}
   },
   "judges": {
     "semantic": {
@@ -31,9 +29,9 @@
     }
   },
   "confidence_threshold": 80,
-  "pass_confidence_threshold": 70,
-  "max_repairs": 2,
+  "pass_confidence_threshold": 85,
+  "max_repairs": 1,
   "max_judge_rounds": 2,
-  "max_generation_attempts": 4,
+  "max_generation_attempts": 3,
   "transport_attempts": 3
 }

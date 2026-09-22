@@ -181,12 +181,20 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
 
 - Semantic judge, positive için query'deki altı bilgi alanını (`positive_fact_coverage`)
   ayrı ayrı raporlar; biri false veya belirsizse family kabul edilmez.
-- Somut hata bildirimi için eşik `%80`dir. İki judge da `pass` verirse `%70–79`
-  arası karar güveni kabulü engellemez; `%70` altı gerçekten belirsiz pass bir kez
-  yeniden değerlendirilir. Bu ayrım, iyi family'leri salt ihtiyatlı ifade yüzünden
-  gereksiz yeniden üretmemek içindir.
-- Morphology judge'ın `natural=false` kararı veya düşük güvenli PASS sonucu family'yi
-  yeniden değerlendirmeye gönderir; yalnız sorunlu aday patch edilir.
+- Somut hata bildirimi için eşik `%80`dir. İki judge da `pass` verirse ve
+  ikisinin güveni de en az `%85` ise karar `accept` olur. İkisi de `pass`
+  verdiği halde en az biri `%85` altında kalırsa karar `human_review` olur:
+  family train'e girer; uyarı nedeni ve iki güven puanı kaydedilir. Güven,
+  örneğin doğruluk yüzdesi değildir.
+- Semantik judge `pass`, morfoloji judge tek/iki aday için `fail` derse veya
+  ikisi `pass` deyip aynı adayın Türkçe doğallığında ayrışırsa karar
+  `human_review` olur; veri yine kabul edilir ve üretim durmaz. Çelişki
+  nedeni ve iki özgün judge raporu kayıtta kalır. Semantik judge'ın ikinci
+  gold/positive kayması bulgusu ve yaygın morfoloji kusurları ise otomatik
+  kabul edilmez; mevcut sınırlı düzeltme/ret politikası uygulanır.
+- Morphology judge'ın `natural=false` kararı açık hata olarak ele alınır;
+  sorunlu aday için sınırlı patch denenir. Geçerli hata veya geçersiz judge
+  raporu `human_review` etiketiyle otomatik kabul edilmez.
 - Morph adaylarının lemma/POS bilgisi positive ile aynı hedef sözcükte kalmalı; kritik
   sözcük çıkarıldıktan sonra kalan içerik belirgin biçimde kopmamalıdır. Yerel örtüşme
   filtresi yalnız aşırı drift'i yakalamak için %45 eşiğindedir; yakın durumları judge değerlendirir.
@@ -216,7 +224,10 @@ Schema, korunan metin/kökler ve doğru kritik cümle tipi zorunludur. Cümle sa
 uzunluk oranı üretim hedefidir, ret filtresi değildir. Strict positive–morph_1 için
 aynı lemma ve hedef sözcük dışındaki aynı şablon yerel filtreyle zorunludur;
 diğer modlarda tek-token edit zorunlu değildir.
-Human-review/uyarı kuyruğu yoktur. Generator lemma açıklamaları
+`accept` ve `human_review` train export'una girer; `reject` girmez.
+`human_review` bekleme kapısı değildir. Sonradan incelenebilecek uyarı ve
+`review_reason`/`judge_confidence` metadata'sı aynı kayıtta tutulur.
+Generator lemma açıklamaları
 judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 
 ## Dosyalar / kayıt

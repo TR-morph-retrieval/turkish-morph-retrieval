@@ -11,9 +11,16 @@ import os
 from pathlib import Path
 import random
 import re
+import ssl
 import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+try:
+    import certifi
+    OPENROUTER_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    OPENROUTER_SSL_CONTEXT = ssl.create_default_context()
 
 HERE = Path(__file__).resolve().parent
 SLOTS = ("positive", "morph_1", "morph_2", "semantic_1")
@@ -140,6 +147,18 @@ def validate_family(family):
                 errors.append(f"{c.get('slot')}:missing_morph_change")
     if len({normalized(t) for t in texts}) != len(texts):
         errors.append("candidates:duplicate_text")
+    # Controlled morphological negatives preserve the positive's target lemma.
+    by_slot = {c.get('slot'): c for c in candidates if isinstance(c, dict)}
+    positive_lemma = normalized(str(by_slot.get('positive', {}).get('critical_lemma', '')))
+    # Query and positive may legitimately use different lemmas (paraphrase).
+    # Only the controlled morph hard candidates must preserve the positive
+    # lemma; this keeps the filter strict on morphology without blocking
+    # natural semantic variation in the retrieval pair.
+    if positive_lemma:
+        for slot in ('morph_1', 'morph_2'):
+            lemma = normalized(str(by_slot.get(slot, {}).get('critical_lemma', '')))
+            if lemma and lemma != positive_lemma:
+                errors.append(f'{slot}:positive_critical_lemma_mismatch')
     if isinstance(family.get('query'), str):
         if normalized(family['query']) in {normalized(t) for t in texts}:
             errors.append("query:copied_candidate")
@@ -186,19 +205,29 @@ def policy(reports, valid_ids, threshold=80, pass_threshold=None):
         return {'action': 'retry', 'reason': 'missing_judge'}
     if any(not assess(v, valid_ids) for v in reports.values()):
         return {'action': 'retry', 'reason': 'invalid_judge_report'}
+    decisions = {v['decision'] for v in reports.values()}
+    # A semantic fail may mean a second gold; never admit that as a warning.
+    # Widespread morphology failures likewise need a fresh family.
+    if (decisions == {'pass', 'fail'} and reports['semantic']['decision'] == 'pass'
+            and reports['morphology']['decision'] == 'fail'
+            and len({f['candidate_id'] for f in reports['morphology']['findings']}) < 3):
+        return {'action': 'human_review', 'reason': 'judge_decision_disagreement'}
     failures = [v for v in reports.values() if v['decision'] == 'fail' and v['confidence'] >= threshold]
     if failures:
         findings = [f for v in failures for f in v['findings']]
         if len({f['candidate_id'] for f in findings}) >= 3:
             return {'action': 'regenerate', 'reason': 'widespread_quality_failure'}
         return {'action': 'repair', 'findings': findings}
-    # A pass is not a claim that the family is 80% correct. Requiring the same
-    # very high confidence used for a concrete error wastes sound training rows.
-    # Both independent judges must still pass, and a genuinely uncertain pass is
-    # retried once rather than silently accepted.
-    if any(v['decision'] == 'pass' and v['confidence'] < pass_threshold for v in reports.values()):
-        return {'action': 'retry', 'reason': 'low_confidence_pass'}
     if all(v['decision'] == 'pass' for v in reports.values()):
+        semantic_checks = {row['candidate_id']: row['natural']
+                           for row in reports['semantic'].get('candidate_checks', [])}
+        morphology_checks = {row['candidate_id']: row['checks']['natural']
+                             for row in reports['morphology'].get('candidate_checks', [])}
+        if any(semantic_checks.get(cid) != morphology_checks.get(cid)
+               for cid in valid_ids if cid in semantic_checks and cid in morphology_checks):
+            return {'action': 'human_review', 'reason': 'judge_naturalness_disagreement'}
+        if any(v['confidence'] < pass_threshold for v in reports.values()):
+            return {'action': 'human_review', 'reason': 'low_confidence_pass'}
         return {'action': 'accept'}
     return {'action': 'retry', 'reason': 'uncertain_or_abstain'}
 
@@ -226,7 +255,7 @@ class OpenRouter:
                                        'Content-Type': 'application/json'})
             started = time.monotonic()
             try:
-                with urlopen(request, timeout=120) as response:
+                with urlopen(request, timeout=120, context=OPENROUTER_SSL_CONTEXT) as response:
                     raw = json.load(response)
                 choice = raw['choices'][0]
                 history.append({'response_id': raw.get('id'), 'provider': raw.get('provider'),
@@ -258,11 +287,12 @@ class OpenRouter:
                 return value, {'requested_model': settings['model'], 'settings': settings,
                                'prompt_sha256': digest(prompt), 'attempts': history}
             except HTTPError as exc:
-                history.append({'http_status': exc.code})
+                history.append({'http_status': exc.code, 'error': str(exc)[:300]})
                 if exc.code not in {408, 429, 500, 502, 503, 504}:
                     break
-            except (URLError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
-                history.append({'error': 'transport_or_invalid_json'})
+            except (URLError, TimeoutError, ValueError, KeyError, IndexError, TypeError) as exc:
+                history.append({'error': 'transport_or_invalid_json',
+                                'detail': f'{type(exc).__name__}: {exc}'[:300]})
             if attempt + 1 < self.attempts:
                 time.sleep(min(2 ** attempt, 4))
         error = TransportError('OpenRouter response unavailable; do not reject the family')
@@ -288,6 +318,8 @@ Candidate text alanını ve tekrarlanan bağlamı YAZMA. context_sentences yaln�
 kez, her adaya uyan nötr bağlamdır; kritik olayı veya sonucunu açıklayıp cevabı verme.
 Python critical_sentence'ı context_sentences içine critical_position (0 tabanlı)
 konumuna yerleştirir. semantic_1 için de aynı bağlam anlamlı kalmalı.
+Bağlamdaki sonuç/"böylece" cümlesi semantic_1 ile de doğru olmalı; değilse
+bu cümleyi nötrleştir veya kaldır. Farklı olayı aynı sonucu doğurmuş gibi yazma.
 context_sentences sayısı passage_sentence_count - 1 olmalı; critical_position bu
 listenin 0..uzunluk aralığında olmalı. Query tam query_sentence_count cümle olmalı.
 Planın target_feature/target_description/domain/register/template.id değerlerini aynen kullan.
@@ -412,7 +444,12 @@ adayları `relevant_ids` içinde seç. Konu benzerliği yetmez: katılımcı, ne
 yer, zaman, kutupluluk/kip ve sonuç korunmalı. Negatifin query'yi karşılamaması beklenen
 bir durumdur ve tek başına veri hatası değildir. Fail yalnız positive kapsam kayması,
 ikinci doğru aday, bozuk/doğal olmayan cümle veya iç çelişki gibi somut kusur içindir.
+Her adayı kendi bağlamıyla oku: farklı olayın ardından kopyalanmış sonuç cümlesi
+mantıksız kalıyorsa o aday iç çelişkilidir; fail ve somut bulgu yaz.
 Ufak üslup farklarını hata sayma. Generator metadata'sına değil metne dayan.
+Her aday için `natural` alanında cümlenin doğal Türkçe olup olmadığını ayrıca belirt.
+Bu alan morfoloji judge'ının doğallık kararıyla karşılaştırılıp anlaşmazlıkta
+human_review uyarısı üretir; açık kusuru findings içinde de bildir.
 
 Yalnız kısa JSON döndür: {"decision":"pass|fail|abstain","confidence":0-100,
 "reason":"kısa gerekçe","findings":[{"candidate_id":"c0","reason":"hata"}],
@@ -421,7 +458,8 @@ Yalnız kısa JSON döndür: {"decision":"pass|fail|abstain","confidence":0-100,
 Pass ise findings boş; fail ise somut candidate_id zorunlu. Confidence karar güvenidir.
 Her aday için candidate_checks döndür:
 [{"candidate_id":"c0","checks":{"participants":true,"object":true,"event":true,
-"place":true,"time":true,"outcome":true},"evidence":"metinden kısa karşılaştırma"}].
+"place":true,"time":true,"outcome":true},"natural":true,
+"evidence":"metinden kısa karşılaştırma"}].
 query_claims ve positive_claims aynı altı anahtarı **kısa string metin değerleriyle**;
 positive_fact_coverage aynı anahtarları boolean değerlerle eksiksiz taşımalı.
 Claim alanlarına true/false yazma. Eksilen/genişleyen ayrıntı coverage'da false;
@@ -483,6 +521,8 @@ def checked_verdict(verdict, kind, ids):
             return {}
         if any(type(v) is not bool for v in checks.values()) or not isinstance(row.get('evidence'), str) or not row['evidence'].strip():
             return {}
+        if kind == 'semantic' and type(row.get('natural')) is not bool:
+            return {}
         if kind == 'morphology' and (not isinstance(row.get('observed_feature'), str)
                                      or not row['observed_feature'].strip()):
             return {}
@@ -519,14 +559,18 @@ def evaluate(family, client, cfg, guard):
     """guard checks leakage/quotas locally, never sends protected examples to judges.
 
     Returns accepted/rejected/deferred_transport, full history and the final family.
-    No writes, no hidden changes to query/target/unflagged candidates, no review queue.
+    A human_review decision is accepted with a metadata warning, not a gate.
     """
     item = deepcopy(family)
     events, repairs = [], 0
     config_hash = digest(cfg)
 
-    def result(status, reason):
+    def result(status, reason, train_decision=None, review_reason=None, judge_confidence=None):
         return {'status': status, 'reason': reason, 'family': item,
+                'train_decision': train_decision or ('accept' if status == 'accepted' else
+                                                   'reject' if status == 'rejected' else None),
+                'review_reason': review_reason,
+                'judge_confidence': judge_confidence or {},
                 'repairs': repairs, 'config_sha256': config_hash, 'events': events}
 
     def apply_slot_repair(findings, stage):
@@ -635,7 +679,12 @@ def evaluate(family, client, cfg, guard):
                               cfg['pass_confidence_threshold'])
             events.append({'stage': 'policy', 'round': round_id, **decision})
             if decision['action'] == 'accept':
-                return result('accepted', 'both_judges_pass')
+                return result('accepted', 'both_judges_pass',
+                              judge_confidence={k: v['confidence'] for k, v in reports.items()})
+            if decision['action'] == 'human_review':
+                return result('accepted', 'judges_pass_review_flag',
+                              train_decision='human_review', review_reason=decision['reason'],
+                              judge_confidence={k: v['confidence'] for k, v in reports.items()})
             if decision['action'] == 'regenerate':
                 return result('rejected', decision['reason'])
             if decision['action'] == 'repair':

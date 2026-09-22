@@ -448,7 +448,7 @@ def other_run_memory(folder):
 
 def generate_run(folder, client, limit=10, max_calls=30, range_from=None, range_to=None):
     manifest, protected, plan = verify(folder)
-    # Train has no human-review gate; two automatic judges are the quality gate.
+    # Review flags are metadata only; both accepted classes enter train output.
     cfg = manifest['config']
     store = Store(folder/'state.sqlite3')
     budget = {'remaining': max_calls, 'lock': threading.Lock()}
@@ -551,6 +551,7 @@ def report(folder, store):
     plan = read_json(folder/'plan.json')
     counts = dict(store.execute('SELECT status,COUNT(*) FROM jobs GROUP BY status'))
     accepted = store.accepted()
+    train_decisions = Counter(x.get('train_decision', 'accept') for x in accepted)
     request_events = store.execute("SELECT kind,value FROM events WHERE kind IN ('request_finished','request_failed')")
     known_cost, missing_cost, attempts = 0.0, 0, 0
     judge_decisions, rejection_reasons, repairs = Counter(), Counter(), 0
@@ -574,6 +575,7 @@ def report(folder, store):
             else:
                 missing_cost += 1
     return {'planned':len(plan), 'statuses':counts, 'accepted':len(accepted),
+            'train_decisions':dict(train_decisions),
             'plan_features':dict(Counter(x['target_feature'] for x in plan)),
             'plan_modes':dict(Counter(x['family_mode'] for x in plan)),
             'accepted_features':dict(Counter(x['target_feature'] for x in accepted)),
