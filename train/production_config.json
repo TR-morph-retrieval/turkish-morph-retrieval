@@ -1,5 +1,5 @@
 {
-  "version": "train-v21-judge-disagreement-flags",
+  "version": "train-v24-single-low-relaxed-warnings",
   "generation_mode": "single",
   "family_workers": 3,
   "composition_policy": {

@@ -325,6 +325,11 @@ class Store:
     def accepted(self):
         return [json.loads(row[0])['family'] for row in self.execute("SELECT result FROM jobs WHERE status='accepted' ORDER BY id")]
 
+    def accepted_results(self):
+        """Accepted envelopes retain train_decision metadata for reporting."""
+        return [json.loads(row[0]) for row in self.execute(
+            "SELECT result FROM jobs WHERE status='accepted' ORDER BY id")]
+
     def close(self):
         self.db.close()
 
@@ -550,7 +555,7 @@ def generate_run(folder, client, limit=10, max_calls=30, range_from=None, range_
 def report(folder, store):
     plan = read_json(folder/'plan.json')
     counts = dict(store.execute('SELECT status,COUNT(*) FROM jobs GROUP BY status'))
-    accepted = store.accepted()
+    accepted = store.accepted_results()
     train_decisions = Counter(x.get('train_decision', 'accept') for x in accepted)
     request_events = store.execute("SELECT kind,value FROM events WHERE kind IN ('request_finished','request_failed')")
     known_cost, missing_cost, attempts = 0.0, 0, 0
@@ -578,7 +583,7 @@ def report(folder, store):
             'train_decisions':dict(train_decisions),
             'plan_features':dict(Counter(x['target_feature'] for x in plan)),
             'plan_modes':dict(Counter(x['family_mode'] for x in plan)),
-            'accepted_features':dict(Counter(x['target_feature'] for x in accepted)),
+            'accepted_features':dict(Counter(x['family']['target_feature'] for x in accepted)),
             'judge_decisions':dict(judge_decisions), 'repairs':repairs,
             'result_reasons':dict(rejection_reasons),
             'known_cost_usd':round(known_cost,6), 'attempts_without_cost':missing_cost,

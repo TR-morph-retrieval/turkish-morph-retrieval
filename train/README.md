@@ -196,8 +196,10 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
   sorunlu aday için sınırlı patch denenir. Geçerli hata veya geçersiz judge
   raporu `human_review` etiketiyle otomatik kabul edilmez.
 - Morph adaylarının lemma/POS bilgisi positive ile aynı hedef sözcükte kalmalı; kritik
-  sözcük çıkarıldıktan sonra kalan içerik belirgin biçimde kopmamalıdır. Yerel örtüşme
-  filtresi yalnız aşırı drift'i yakalamak için %45 eşiğindedir; yakın durumları judge değerlendirir.
+  sözcük çıkarıldıktan sonra kalan içerik belirgin biçimde kopmamalıdır. Bu yerel
+  annotation/örtüşme heuristic'lerinde sapma, train'de doğrudan ret değil
+  `human_review` uyarısıdır; morfoloji judge'ı metinden yeniden denetler. Yerel filtre
+  yalnız aşırı drift'i işaretler; yakın durumları judge değerlendirir.
 - Semantic judge `query_claims` ve `positive_claims` tablolarını kendisi çıkarır;
   generator'ın `event_frame` bilgisi gold kanıtı sayılmaz. Özne/olay/yer/zaman/sonuç
   kayması varsa positive coverage false olur.

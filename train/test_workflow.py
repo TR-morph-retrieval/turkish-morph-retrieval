@@ -46,8 +46,15 @@ class Client:
 
     def call(self, settings, prompt):
         self.calls+=1
-        if 'Train slotu:\n' in prompt:
+        if 'Sabit çekirdek:\n' in prompt:
+            value={'candidates': [c for c in fixture()['candidates'] if c['slot'] != 'positive']}
+        elif 'Train slotu:\n' in prompt:
             value=fixture()
+            # Hybrid production first creates only query/positive; preserve the
+            # fixture's shared metadata while matching that response contract.
+            if 'ilk aşamasısın' in prompt:
+                value['positive'] = next(c for c in value['candidates'] if c['slot'] == 'positive')
+                value.pop('candidates')
         else:
             if not settings['model'].startswith('z-ai/') and self.fail_once:
                 self.fail_once=False

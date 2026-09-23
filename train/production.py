@@ -70,6 +70,30 @@ def canonicalize_query_annotation(family):
     return family
 
 
+def canonicalize_candidate_annotations(family):
+    """Repair harmless sentence-boundary annotation drift without changing text."""
+    if not isinstance(family, dict):
+        return family
+    for candidate in family.get('candidates', []):
+        if not isinstance(candidate, dict):
+            continue
+        text, word, declared = (candidate.get('text'), candidate.get('critical_word'),
+                                candidate.get('critical_sentence'))
+        if not all(isinstance(value, str) and value.strip() for value in (text, word, declared)):
+            continue
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text.strip()) if s.strip()]
+        if declared in sentences:
+            continue
+        exact = [s for s in sentences if normalized(s) == normalized(declared)]
+        if len(exact) == 1:
+            candidate['critical_sentence'] = exact[0]
+            continue
+        matches = [s for s in sentences if normalized(word) in normalized(s).split()]
+        if len(matches) == 1:
+            candidate['critical_sentence'] = matches[0]
+    return family
+
+
 def load_config():
     cfg = json.loads((HERE / "production_config.json").read_text(encoding="utf-8"))
     if os.environ.get('TRAIN_GENERATION_MODE') in {'single', 'hybrid'}:
@@ -422,7 +446,8 @@ def generate_family(client, cfg, spec):
                   else 'unspecified')
             for key in FACT_KEYS
         }
-    return canonicalize_query_annotation(materialize(value)), provenance
+    item = materialize(value)
+    return canonicalize_candidate_annotations(canonicalize_query_annotation(item)), provenance
 
 
 def judge_prompt(family, kind, order):
@@ -562,7 +587,7 @@ def evaluate(family, client, cfg, guard):
     A human_review decision is accepted with a metadata warning, not a gate.
     """
     item = deepcopy(family)
-    events, repairs = [], 0
+    events, repairs, local_warnings = [], 0, []
     config_hash = digest(cfg)
 
     def result(status, reason, train_decision=None, review_reason=None, judge_confidence=None):
@@ -570,6 +595,7 @@ def evaluate(family, client, cfg, guard):
                 'train_decision': train_decision or ('accept' if status == 'accepted' else
                                                    'reject' if status == 'rejected' else None),
                 'review_reason': review_reason,
+                'local_quality_warnings': local_warnings,
                 'judge_confidence': judge_confidence or {},
                 'repairs': repairs, 'config_sha256': config_hash, 'events': events}
 
@@ -627,12 +653,37 @@ def evaluate(family, client, cfg, guard):
         return [{'slot': slot, 'reason': '; '.join(reasons)}
                 for slot, reasons in sorted(grouped.items())]
 
+    def soft_quality_errors(errors):
+        """Train length/controlled-pair heuristics warn; judges make the final call.
+
+        These do not indicate leakage, a missing candidate, or a changed requested
+        phenomenon.  They are retained as review metadata instead of spending a
+        full regeneration solely on a heuristic mismatch.
+        """
+        patterns = (
+            r'^quality:shared_context_sentence_count$',
+            r'^quality:morph_[12]:(?:context_changed|non_target_content_drift|strict_non_target_edit)$',
+            r'^morph_[12]:positive_critical_lemma_mismatch$',
+            r'^quality:morph_1:strict_lemma_changed$',
+        )
+        return [error for error in errors if any(re.match(pattern, error) for pattern in patterns)]
+
     for round_id in range(cfg['max_judge_rounds']):
         errors = validate_family(item)
         if not errors:
             errors = list(guard(item))
         if errors:
             events.append({'stage': 'local_validation', 'errors': errors})
+            soft = soft_quality_errors(errors)
+            hard = [error for error in errors if error not in soft]
+            if soft:
+                local_warnings.extend(error for error in soft if error not in local_warnings)
+                events.append({'stage': 'local_quality_warning', 'warnings': soft})
+            if not hard:
+                errors = []
+            else:
+                errors = hard
+        if errors:
             findings = local_repair_findings(errors)
             if (findings and repairs < cfg['max_repairs']
                     and round_id + 1 < cfg['max_judge_rounds']):
@@ -679,6 +730,10 @@ def evaluate(family, client, cfg, guard):
                               cfg['pass_confidence_threshold'])
             events.append({'stage': 'policy', 'round': round_id, **decision})
             if decision['action'] == 'accept':
+                if local_warnings:
+                    return result('accepted', 'judges_pass_review_flag',
+                                  train_decision='human_review', review_reason='local_quality_warning',
+                                  judge_confidence={k: v['confidence'] for k, v in reports.items()})
                 return result('accepted', 'both_judges_pass',
                               judge_confidence={k: v['confidence'] for k, v in reports.items()})
             if decision['action'] == 'human_review':

@@ -4,7 +4,9 @@ from copy import deepcopy
 import unittest
 from unittest.mock import patch
 from io import BytesIO
-from production import load_config, policy, validate_family, evaluate, TransportError, OpenRouter, judge_prompt, FACT_KEYS, materialize, checked_verdict
+from production import (load_config, policy, validate_family, evaluate, TransportError,
+                        OpenRouter, judge_prompt, FACT_KEYS, materialize, checked_verdict,
+                        canonicalize_candidate_annotations)
 
 
 def report(decision='pass', confidence=88, findings=None):
@@ -183,7 +185,7 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(out['family']['candidates'][0], FAMILY['candidates'][0])
         self.assertEqual(FAMILY['candidates'][1]['text'], 'Bora parayı iade etti.')
 
-    def test_local_candidate_error_repairs_only_that_slot(self):
+    def test_local_pair_heuristic_warns_without_spending_a_repair(self):
         calls = 0
         def guard(_):
             nonlocal calls
@@ -191,10 +193,9 @@ class ProductionTests(unittest.TestCase):
             return ['quality:morph_1:strict_non_target_edit'] if calls == 1 else []
         out = evaluate(FAMILY, FakeClient(), load_config(), guard)
         self.assertEqual(out['status'], 'accepted')
-        self.assertEqual(out['repairs'], 1)
-        repair = next(e for e in out['events'] if e.get('stage') == 'repair')
-        self.assertEqual(repair['trigger'], 'local_validation')
-        self.assertEqual(repair['slots'], ['morph_1'])
+        self.assertEqual(out['repairs'], 0)
+        self.assertEqual(out['train_decision'], 'human_review')
+        self.assertIn('quality:morph_1:strict_non_target_edit', out['local_quality_warnings'])
         self.assertEqual(out['family']['candidates'][0], FAMILY['candidates'][0])
 
     def test_unflagged_patch_is_ignored(self):
@@ -229,6 +230,24 @@ class ProductionTests(unittest.TestCase):
         semantic['confidence'] = morphology['confidence'] = 72
         self.assertEqual(policy({'semantic': semantic, 'morphology': morphology},
                                 {'c0': 'positive'}, 80, 85)['action'], 'human_review')
+
+    def test_soft_local_pair_warning_enters_train_with_review_metadata(self):
+        out = evaluate(FAMILY, FakeClient(), load_config(),
+                       lambda _: ['quality:morph_1:strict_non_target_edit',
+                                  'morph_2:positive_critical_lemma_mismatch'])
+        self.assertEqual(out['status'], 'accepted')
+        self.assertEqual(out['train_decision'], 'human_review')
+        self.assertEqual(out['review_reason'], 'local_quality_warning')
+        self.assertEqual(out['local_quality_warnings'], [
+            'quality:morph_1:strict_non_target_edit',
+            'morph_2:positive_critical_lemma_mismatch'])
+
+    def test_candidate_annotation_is_canonicalized_from_its_text(self):
+        f = deepcopy(FAMILY)
+        f['candidates'][0]['critical_word'] = 'etmedi'
+        f['candidates'][0]['critical_sentence'] = 'Bora parayı iade etmedi !'
+        canonicalize_candidate_annotations(f)
+        self.assertEqual(f['candidates'][0]['critical_sentence'], 'Bora parayı iade etmedi.')
 
     def test_blind_relevance(self):
         self.assertNotEqual(evaluate(FAMILY, FakeClient('blind_mismatch'), load_config(), lambda x:[])['status'], 'accepted')
