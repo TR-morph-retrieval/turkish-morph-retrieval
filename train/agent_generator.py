@@ -113,14 +113,14 @@ def judge_and_commit_family(folder_path, raw_family):
             'provenance': prov
         })
 
-    # 3. Policy Kontrolü
+    # 3. Policy Kontrolü (production.py evaluate() ile birebir aynı: 'accept' ve 'human_review' kabul edilir)
     threshold = cfg.get('confidence_threshold', 80)
     pass_threshold = cfg.get('pass_confidence_threshold', 85)
     decision = policy(reports, valid_ids, threshold=threshold, pass_threshold=pass_threshold)
 
     elapsed = time.time() - start_time
 
-    if decision.get('action') != 'accept':
+    if decision.get('action') not in ('accept', 'human_review'):
         return {
             "status": "judges_rejected",
             "decision": decision,
@@ -133,7 +133,8 @@ def judge_and_commit_family(folder_path, raw_family):
     judge_events.append({
         'stage': 'policy',
         'round': 0,
-        'action': 'accept'
+        'action': decision.get('action'),
+        'review_reason': decision.get('reason') if decision.get('action') == 'human_review' else None
     })
 
     gen_prov = {
