@@ -36,7 +36,11 @@ def atomic_json(path, value):
 
 
 def source_rows(source):
-    source = Path(source).resolve()
+    source = Path(source)
+    if not source.is_absolute():
+        source = (HERE.parent / source).resolve()
+    else:
+        source = source.resolve()
     paths = sorted(source.glob('*.jsonl')) if source.is_dir() else [source]
     if not paths or any(not p.is_file() for p in paths):
         raise ValueError('Protected source JSONL missing')
@@ -77,7 +81,12 @@ def snapshot(source, expected=600):
                     chain_lemmas[x['target_feature']].add(normalized(candidate['critical_lemma']))
         if 'domain_shift' in x.get('generalization_tags', []):
             pairs.add((x['domain'], x['register']))
-    return {'source': str(Path(source).resolve()), 'source_sha256': sha, 'family_count': len(rows),
+    resolved_source = Path(source).resolve()
+    try:
+        portable_source = str(resolved_source.relative_to(HERE.parent.resolve()))
+    except ValueError:
+        portable_source = str(resolved_source)
+    return {'source': portable_source, 'source_sha256': sha, 'family_count': len(rows),
             'texts': texts, 'forbidden_lemmas': sorted(lemmas),
             'all_test_critical_lemmas': sorted(all_lemmas),
             'forbidden_templates': sorted(templates),
@@ -628,7 +637,7 @@ def api_key():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='cmd', required=True)
-    for name in ['prepare','approve','run','status','export','shard-export','shard-sync','shard-status']:
+    for name in ['prepare','approve','run','status','export','shard-init','shard-export','shard-sync','shard-status']:
         p=sub.add_parser(name);p.add_argument('--run-id', required=True)
         if name=='prepare':
             p.add_argument('--source', type=Path, required=True);p.add_argument('--size',type=int,default=1000);p.add_argument('--seed',type=int,default=42)
@@ -639,6 +648,11 @@ def main():
         if name=='run':
             p.add_argument('--limit',type=int,default=10);p.add_argument('--max-calls',type=int,default=30)
             p.add_argument('--from-index',type=int);p.add_argument('--to-index',type=int)
+        if name == 'shard-init':
+            p.add_argument('--shard-dir', default=str(HERE/'data'/'shards'))
+            p.add_argument('--producers', required=True,
+                           help='Virgülle ayrılmış benzersiz üretici adları')
+            p.add_argument('--chunk-size', type=int, default=25)
         if name == 'shard-export':
             p.add_argument('--output', required=True); p.add_argument('--producer', required=True)
             p.add_argument('--from-index', type=int, required=True); p.add_argument('--to-index', type=int, required=True)
@@ -671,10 +685,12 @@ def main():
                     parser.error('Geçersiz train aralığı')
                 print(json.dumps(generate_run(folder,client,args.limit,args.max_calls,args.from_index,args.to_index),ensure_ascii=False,indent=2))
             return
-        if args.cmd in {'shard-export','shard-sync','shard-status'}:
-            from shards import export_shard, sync_shards, validate_shards
+        if args.cmd in {'shard-init','shard-export','shard-sync','shard-status'}:
+            from shards import create_assignments, export_shard, sync_shards, validate_shards
             shard_dir = Path(getattr(args, 'shard_dir', HERE/'data'/'shards'))
-            if args.cmd == 'shard-export':
+            if args.cmd == 'shard-init':
+                value = create_assignments(folder, shard_dir, args.producers.split(','), args.chunk_size)
+            elif args.cmd == 'shard-export':
                 value = export_shard(folder, Path(args.output), args.producer, args.from_index, args.to_index)
             elif args.cmd == 'shard-sync':
                 value = sync_shards(folder, shard_dir)

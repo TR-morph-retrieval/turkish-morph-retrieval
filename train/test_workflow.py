@@ -13,7 +13,7 @@ from production import FACT_KEYS, load_config
 from test_production import add_checks
 from workflow import (Guard, SimilarityIndex, Store, approve, contract, export, generate_run,
                       make_plan, prepare, read_json, report, run_lock, snapshot, verify, CachedClient)
-from shards import export_shard, validate_shards, sync_shards
+from shards import create_assignments, export_shard, validate_shards, sync_shards
 
 
 SPEC = {'slot_id':'train_000001','target_feature':'NEG','target_description':'Eylem gerçekleşmez',
@@ -207,6 +207,38 @@ class WorkflowTests(unittest.TestCase):
         status = validate_shards(self.folder, shard_dir)
         self.assertEqual(status['covered'], 1)
         self.assertEqual(sync_shards(self.folder, shard_dir)['imported'], 0)
+
+    def test_parallel_assignments_allow_out_of_order_shards(self):
+        folder = self.root/'parallel_shards'
+        specs = [{**SPEC, 'slot_id':f'train_{i:06d}'} for i in range(1, 5)]
+        with patch('workflow.make_plan', return_value=specs):
+            prepare(folder, self.source, 4, 42, pilot=True)
+        shard_dir = self.root/'shared_shards'
+        allocation = create_assignments(folder, shard_dir, ['arda', 'burak'], 2)
+        self.assertEqual(allocation['allocations'], [
+            {'producer':'arda', 'from':1, 'to':2},
+            {'producer':'burak', 'from':3, 'to':4}])
+        store = Store(folder/'state.sqlite3')
+        try:
+            for spec in specs[2:]:
+                row = {'slot_id':spec['slot_id'], 'family':fixture()}
+                store.execute("UPDATE jobs SET status='accepted',result=? WHERE id=?",
+                              (json.dumps(row, ensure_ascii=False), spec['slot_id']))
+        finally:
+            store.close()
+        export_shard(folder, shard_dir/'burak_003_004.jsonl', 'burak', 3, 4)
+        status = validate_shards(folder, shard_dir)
+        self.assertEqual(status['covered'], 2)
+        self.assertFalse(status['complete'])
+        self.assertEqual(status['missing_ranges'], [
+            {'producer':'arda', 'from':1, 'to':2}])
+
+    def test_parallel_assignment_blocks_wrong_owner(self):
+        shard_dir = self.root/'owned_shards'
+        create_assignments(self.folder, shard_dir, ['arda'], 1)
+        client = Client(); generate_run(self.folder, client, limit=1)
+        with self.assertRaises(ValueError):
+            export_shard(self.folder, shard_dir/'burak_001_001.jsonl', 'burak', 1, 1)
 
     def test_resume_and_export(self):
         self.approved();client=Client()

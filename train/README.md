@@ -99,12 +99,35 @@ python3 train/workflow.py export --run-id pilot1000
 python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --existing train/data/pilot/pilot40.jsonl --output train/data/pilot/pilot45.jsonl
 
-# Ekipçe sırayla üretim: önceki shard'ları çek/senkronize et, yalnız kendi aralığını üret.
-python3 train/workflow.py shard-sync --run-id train1000 --shard-dir train/data/shards
-python3 train/workflow.py run --run-id train1000 --from-index 1 --to-index 25 --limit 25 --max-calls 120
-python3 train/workflow.py shard-export --run-id train1000 --producer codex --from-index 1 --to-index 25 --output train/data/shards/codex_001_025.jsonl
-python3 train/workflow.py shard-status --run-id train1000 --shard-dir train/data/shards
-# JSONL + .manifest.json dosyalarını commit/push et; sonraki kişi pull edip kendi aralığını alır.
+# Nihai ortak plan: 5 kişi × 250 bağımsız family = 1.250 family.
+# Herkes aynı commit, kaynak, run-id, size ve seed ile bu yerel run'i hazırlar.
+python3 train/workflow.py prepare --run-id train1250 \
+  --source test/data/final_shards --size 1250 --seed 42
+
+# Koordinatör bir kez aralık sahipliğini oluşturur ve assignments.json'u pushlar:
+# arda 1–250, burak 251–500, kuzey 501–750, emir 751–1000, murat 1001–1250.
+python3 train/workflow.py shard-init --run-id train1250 --chunk-size 250 \
+  --producers arda,burak,kuzey,emir,murat --shard-dir train/data/shards
+
+# Herkes aynı commit'i pull eder, aynı run-id/size/seed ile yerel run'ini hazırlar,
+# sonra assignments.json'da kendisine ait herhangi bir aralığı eşzamanlı üretir.
+python3 train/workflow.py shard-sync --run-id train1250 --shard-dir train/data/shards
+python3 train/workflow.py run --run-id train1250 --from-index 1 --to-index 250 --limit 250 --max-calls 1200
+python3 train/workflow.py shard-export --run-id train1250 --producer arda --from-index 1 --to-index 250 --output train/data/shards/arda_0001_0250.jsonl
+python3 train/workflow.py shard-status --run-id train1250 --shard-dir train/data/shards
+# JSONL + sidecar manifest'i commit et. Push reddedilirse git pull --rebase yapıp
+# tekrar pushla; benzersiz shard dosyaları sayesinde veri üzerine yazılmaz.
+
+# `train/runs/` ve SQLite yereldir, Git'e girmez. Ortak kaynaklar yalnız
+# assignments.json, kişiye özel JSONL shard ve onun manifestidir. Shard'lar
+# sıra beklemeden pushlanabilir; status eksik aralıkları gösterir. Birleştirme
+# yanlış üreticiyi, çakışan aralığı, farklı kod/config'i ve bozuk checksum'ı reddeder.
+
+Eğitim notebooku her bağımsız family için `query → positive` ve
+`positive → query` olmak üzere iki yön oluşturur. Dolayısıyla 1.250 family toplam
+2.500 yönlü çift sağlar; bunlar 2.500 bağımsız üretilmiş family diye raporlanmaz.
+Deterministik validation ayrımından sonra yaklaşık `%90`ı eğitimde, `%10`u validation'da
+kalır; simetri yalnız train bölümüne uygulanır ve final test hiçbir aşamada eğitime girmez.
 
 # Ücretsiz kontroller
 python3 train/production.py --check-config

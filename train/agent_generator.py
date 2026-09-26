@@ -19,7 +19,7 @@ from workflow import verify, generation_spec, Guard, Store, read_json, now, api_
 from production import (
     validate_family, materialize, canonicalize_query_annotation,
     canonicalize_candidate_annotations, FACT_KEYS, OpenRouter,
-    judge_prompt, policy, load_config
+    judge_prompt, policy, load_config, assess, checked_verdict
 )
 
 def get_pending_spec(folder_path, slot_id=None):
@@ -89,7 +89,10 @@ def judge_and_commit_family(folder_path, raw_family):
     # 2. OpenRouter LLM-as-a-Judge Hakemleri Çağrısı
     client = OpenRouter(api_key(), attempts=cfg.get("transport_attempts", 3))
     order = canon_item['candidates']
-    valid_ids = {f'c{i}' for i in range(len(order))}
+    # Agent üretiminde aday sırası karıştırılmıyor; yine de blind judge sonucu
+    # ile amaçlanan positive eşleşmesini açıkça doğrulamak zorundayız.
+    candidate_mapping = {f'c{i}': candidate['slot'] for i, candidate in enumerate(order)}
+    valid_ids = set(candidate_mapping)
 
     reports = {}
     provenances = {}
@@ -100,7 +103,23 @@ def judge_and_commit_family(folder_path, raw_family):
         judge_settings = cfg['judges'][kind]
         prompt = judge_prompt(canon_item, kind, order)
         verdict, prov = client.call(judge_settings, prompt)
-        reports[kind] = verdict
+        # ``pass`` tek başına yeterli değildir: semantic judge yalnız positive
+        # adayını relevant seçmiş ve positive'ın tüm temel olgu alanlarını
+        # korumuş olmalıdır. Bu, production.evaluate ile aynı sözleşmedir.
+        if kind == 'semantic' and assess(verdict, valid_ids):
+            relevant = verdict.get('relevant_ids')
+            expected = {candidate_id for candidate_id, slot in candidate_mapping.items() if slot == 'positive'}
+            if not isinstance(relevant, list) or any(candidate_id not in valid_ids for candidate_id in relevant):
+                verdict = {}
+            elif verdict['decision'] != 'abstain' and set(relevant) != expected:
+                verdict = deepcopy(verdict)
+                verdict['decision'] = 'fail'
+                wrong = set(relevant) ^ expected
+                verdict['findings'] += [
+                    {'candidate_id': candidate_id, 'reason': 'Blind relevance differs from intended positive'}
+                    for candidate_id in sorted(wrong)
+                ]
+        reports[kind] = checked_verdict(verdict, kind, candidate_mapping)
         provenances[kind] = prov
 
         cost = prov.get('attempts', [{}])[0].get('usage', {}).get('cost', 0.0)
@@ -110,7 +129,8 @@ def judge_and_commit_family(folder_path, raw_family):
             'stage': kind,
             'round': 0,
             'verdict': verdict,
-            'provenance': prov
+            'provenance': prov,
+            'candidate_mapping': candidate_mapping,
         })
 
     # 3. Policy Kontrolü (production.py evaluate() ile birebir aynı: 'accept' ve 'human_review' kabul edilir)
@@ -145,7 +165,7 @@ def judge_and_commit_family(folder_path, raw_family):
 
     result_data = {
         "status": "accepted",
-        "reason": "both_judges_pass",
+        "reason": "judges_pass_review_flag" if decision.get('action') == 'human_review' else "both_judges_pass",
         "family": canon_item,
         "repairs": 0,
         "config_sha256": manifest["contract_sha256"],
@@ -157,7 +177,10 @@ def judge_and_commit_family(folder_path, raw_family):
         "pilot_review_id": f"{folder.name}:{slot_id}",
         "source_run": folder.name,
         "purpose": manifest.get("purpose", "pilot_only"),
-        "eligible_for_final_train": manifest.get("eligible_for_final_train", False)
+        "eligible_for_final_train": manifest.get("eligible_for_final_train", False),
+        "train_decision": "human_review" if decision.get('action') == 'human_review' else "accept",
+        "review_reason": decision.get('reason') if decision.get('action') == 'human_review' else None,
+        "judge_confidence": {kind: report['confidence'] for kind, report in reports.items()},
     }
 
     store.execute(

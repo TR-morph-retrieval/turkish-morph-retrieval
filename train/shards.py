@@ -1,4 +1,4 @@
-"""Git-shared JSONL shards for sequential train production.
+"""Git-shared JSONL shards for parallel, multi-machine train production.
 
 Shard files are the collaboration boundary; SQLite remains private to each machine.
 """
@@ -25,11 +25,58 @@ def manifest_path(shard: Path) -> Path:
     return shard.with_suffix(shard.suffix + '.manifest.json')
 
 
+def assignments_path(shard_dir: Path) -> Path:
+    return Path(shard_dir) / 'assignments.json'
+
+
 def write_json(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + '.tmp')
     tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
     tmp.replace(path)
+
+
+def create_assignments(folder: Path, shard_dir: Path, producers, chunk_size: int):
+    """Create the checked-in, deterministic ownership map before production starts."""
+    from workflow import verify
+    manifest, _, plan = verify(folder)
+    producers = [p.strip() for p in producers if p.strip()]
+    if not producers or len(producers) != len(set(producers)):
+        raise ValueError('Üretici adları boş veya tekrarlı olamaz')
+    if chunk_size < 1:
+        raise ValueError('chunk_size pozitif olmalı')
+    path = assignments_path(shard_dir)
+    if path.exists():
+        raise FileExistsError(f'Atama dosyası zaten var: {path}')
+    allocations = []
+    for number, start in enumerate(range(1, len(plan) + 1, chunk_size)):
+        end = min(start + chunk_size - 1, len(plan))
+        allocations.append({'producer': producers[number % len(producers)],
+                            'from': start, 'to': end})
+    value = {'version': 1, 'run_id': folder.name, 'size': len(plan),
+             'chunk_size': chunk_size, 'contract_sha256': manifest['contract_sha256'],
+             'producers': producers, 'allocations': allocations}
+    write_json(path, value)
+    return value
+
+
+def read_assignments(folder: Path, shard_dir: Path):
+    from workflow import read_json, verify
+    path = assignments_path(shard_dir)
+    if not path.exists():
+        return None
+    manifest, _, plan = verify(folder)
+    value = read_json(path)
+    if (value.get('run_id') != folder.name or value.get('size') != len(plan)
+            or value.get('contract_sha256') != manifest['contract_sha256']):
+        raise ValueError('assignments.json bu run/plan sözleşmesine ait değil')
+    expected = list(range(1, len(plan) + 1))
+    actual = []
+    for allocation in value.get('allocations', []):
+        actual.extend(range(allocation['from'], allocation['to'] + 1))
+    if sorted(actual) != expected or len(actual) != len(set(actual)):
+        raise ValueError('Atamalar bütün planı tam bir kez kapsamalı')
+    return value
 
 
 def export_shard(folder: Path, output: Path, producer: str, start: int, end: int):
@@ -50,6 +97,12 @@ def export_shard(folder: Path, output: Path, producer: str, start: int, end: int
     finally:
         store.close()
     output = Path(output)
+    assignments = read_assignments(folder, output.parent)
+    if assignments is not None and not any(
+        x == {'producer': producer, 'from': start, 'to': end}
+        for x in assignments['allocations']
+    ):
+        raise ValueError(f'{producer} için {start}-{end} aralığı atanmış değil')
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp = output.with_suffix(output.suffix + '.tmp')
     tmp.write_text(''.join(json.dumps(row, ensure_ascii=False) + '\n' for row in rows), encoding='utf-8')
@@ -68,8 +121,10 @@ def validate_shards(folder: Path, shard_dir: Path):
     manifest, _, plan = verify(folder)
     shard_dir = Path(shard_dir)
     files = sorted(shard_dir.glob('*.jsonl'))
+    assignments = read_assignments(folder, shard_dir)
     if not files:
-        return {'run_id': folder.name, 'shards': 0, 'covered': 0, 'next': 1}
+        return {'run_id': folder.name, 'shards': 0, 'covered': 0,
+                'missing_ranges': assignments['allocations'] if assignments else []}
     contracts = set(); ranges = []
     for path in files:
         sidecar = manifest_path(path)
@@ -89,15 +144,25 @@ def validate_shards(folder: Path, shard_dir: Path):
             raise ValueError(f'{path.name}: contract checksum hatalı')
         if meta['run_contract'].get('contract_sha256') != manifest['contract_sha256']:
             raise ValueError(f'{path.name}: farklı üretim sözleşmesi')
+        if assignments is not None and not any(
+            x == {'producer': meta.get('producer'), 'from': start, 'to': end}
+            for x in assignments['allocations']
+        ):
+            raise ValueError(f'{path.name}: üretici/aralık assignments.json ile uyuşmuyor')
         contracts.add(meta['run_contract_sha256']); ranges.append((start, end, path.name))
     ranges.sort()
-    expected_start = 1
+    previous_end = 0
     for start, end, name in ranges:
-        if start != expected_start:
-            raise ValueError(f'Shard aralığı boşluklu/çakışık: {name}, beklenen {expected_start}')
-        expected_start = end + 1
-    return {'run_id': folder.name, 'shards': len(ranges), 'covered': expected_start - 1,
-            'next': expected_start, 'contract': next(iter(contracts))}
+        if start <= previous_end:
+            raise ValueError(f'Shard aralığı çakışıyor: {name}')
+        previous_end = end
+    completed = {(start, end) for start, end, _ in ranges}
+    missing = ([x for x in assignments['allocations']
+                if (x['from'], x['to']) not in completed] if assignments else [])
+    return {'run_id': folder.name, 'shards': len(ranges),
+            'covered': sum(end - start + 1 for start, end, _ in ranges),
+            'complete': not missing and (assignments is not None or previous_end == len(plan)),
+            'missing_ranges': missing, 'contract': next(iter(contracts))}
 
 
 def sync_shards(folder: Path, shard_dir: Path):
