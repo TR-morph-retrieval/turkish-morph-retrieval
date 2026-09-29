@@ -157,6 +157,7 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         _write_json(paths.plan, slots)
 
     config_sha256 = hashlib.sha256(Path(cfg["_config_path"]).read_bytes()).hexdigest()
+    execution_config_sha256 = config_sha256
     source_hashes = _pipeline_source_hashes()
     execution_hashes = dict(source_hashes)
     # A narrowly approved transport fix retains the dataset contract. All actual
@@ -166,6 +167,10 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         compatibility = json.loads(compatibility_path.read_text(encoding="utf-8"))
         if source_hashes == compatibility["execution_source_sha256"]:
             source_hashes = compatibility["dataset_source_sha256"]
+            # The sealed-600 migration only reclassified the fixed 600 items; retain the
+            # historical dataset contract while recording the actual config that ran.
+            if config_sha256 == compatibility.get("execution_config_sha256"):
+                config_sha256 = compatibility["dataset_config_sha256"]
     manifest = {
         "run_id": run_id,
         "dataset_name": cfg["dataset_name"],
@@ -177,6 +182,7 @@ def initialise_run(run_id: str, cfg: dict[str, Any], slots: list[dict[str, Any]]
         "execution_source_sha256": execution_hashes,
         "config_path": cfg["_config_path"],
         "config_sha256": config_sha256,
+        "execution_config_sha256": execution_config_sha256,
         "plan_sha256": current_hash,
         "plan_size": len(slots),
         "plan_statistics": plan_statistics(slots),
