@@ -10,6 +10,7 @@ __pycache__/
 
 # Independent train runtime state (not the shared test state).
 train/runs/
+train/archive/pilot/runs/
 
 # New test generation/review state. It contains blinded reviewer work and private sealed qrels.
 test/runs/

@@ -123,6 +123,65 @@ def normalized(text):
     return ' '.join(re.findall(r'\w+', text.replace('I', 'ı').replace('İ', 'i').lower()))
 
 
+def local_linguistic_warnings(family):
+    """Conservative local linguistic screens; warnings add no model/API call."""
+    if not isinstance(family, dict):
+        return []
+    warnings = []
+    candidates = [c for c in family.get('candidates', []) if isinstance(c, dict)]
+    by_slot = {c.get('slot'): c for c in candidates}
+    query = str(family.get('query', ''))
+    positive = str(by_slot.get('positive', {}).get('critical_sentence', ''))
+    combined = f'{query} {positive}'.lower()
+
+    critical_words = [str(family.get('query_critical_word', ''))]
+    critical_words += [str(c.get('critical_word', '')) for c in candidates]
+    has_1pl_possessive = any(
+        re.search(r'(?:ımız|imiz|umuz|ümüz)(?:dan|den|a|e|ı|i|u|ü|da|de)?$', word.lower())
+        for word in critical_words)
+    first_person_anchor = re.search(
+        r'\b(?:biz|bizim)\b|\w+(?:dık|dik|duk|dük|tık|tik|tuk|tük|yoruz|yiz|yız|yuz|yüz|acağız|eceğiz)\b',
+        combined)
+    third_person_report = re.search(
+        r'\w+(?:dılar|diler|dular|düler|tılar|tiler|tular|tüler|mışlar|mişler|muşlar|müşler)\b',
+        combined)
+    if has_1pl_possessive and not first_person_anchor and third_person_report:
+        warnings.append('quality:family:subject_possessive_person_mismatch')
+
+    template = family.get('template_id')
+    if template == 'reported_speech' and not re.search(
+        r'\b(?:dedi|dediler|söyledi|söylediler|belirtti|belirttiler|açıkladı|açıkladılar|'
+        r'bildirdi|bildirdiler|aktardı|aktardılar|duyurdu|duyurdular|ifade etti|ifade ettiler)\b',
+        combined):
+        warnings.append('quality:family:template_reported_speech_mismatch')
+    if template == 'relative_clause' and not re.search(
+        r'\b\w+(?:an|en|dığı|diği|duğu|düğü|tığı|tiği|tuğu|tüğü|acak|ecek|mış|miş|muş|müş)\s+\w+',
+        combined):
+        warnings.append('quality:family:template_relative_clause_mismatch')
+
+    target = str(family.get('target_feature', '')).upper()
+    person_allowed = any(x in target for x in (
+        'POSS', 'AGR', 'PERSON', '1SG', '2SG', '3SG', '1PL', '2PL', '3PL', '.PL', '.SG'))
+    person_terms = re.compile(
+        r'\b(?:tekil|çoğul|birinci|ikinci|üçüncü|1\.|2\.|3\.|1sg|2sg|3sg|1pl|2pl|3pl)\b', re.I)
+    for slot in ('morph_1', 'morph_2'):
+        change = by_slot.get(slot, {}).get('morph_change')
+        if not isinstance(change, dict):
+            continue
+        before, after = str(change.get('from', '')), str(change.get('to', ''))
+        before_person = set(person_terms.findall(before))
+        after_person = set(person_terms.findall(after))
+        surface_before = before.split(maxsplit=1)[0].lower()
+        surface_after = after.split(maxsplit=1)[0].lower()
+        plural_before = bool(re.search(r'(?:lar|ler)(?:[+\-)]|$)', surface_before)) or 'çoğul' in before.lower()
+        plural_after = bool(re.search(r'(?:lar|ler)(?:[+\-)]|$)', surface_after)) or 'çoğul' in after.lower()
+        explicit_number_change = ('tekil' in before.lower()) != ('tekil' in after.lower()) or plural_before != plural_after
+        if not person_allowed and ((before_person and after_person and before_person != after_person)
+                                   or explicit_number_change):
+            warnings.append(f'quality:{slot}:non_target_person_number_change')
+    return warnings
+
+
 def validate_family(family):
     """Structural checks, not a morphological parser or a leakage guarantee."""
     errors = []
@@ -367,6 +426,9 @@ Yalnız hedef morfolojik işlev veya onun zorunlu rol/uyum sonucu değişmeli.
 JSON'u vermeden önce sessizce kontrol et: positive ile morph_1/morph_2'de hedef
 sözcük dışındaki kişi, nesne, yer, zaman ve olay birebir aynı mı? Değilse family'yi
 yeniden kur; dört adayı birbirinden bağımsız yeni olaylar olarak yazma.
+İyelik ekinin kişisi, cümlenin katılımcı/anlatıcı perspektifiyle uyumlu olsun.
+template_id reported_speech ise gerçek bir aktarma yapısı; relative_clause ise gerçek
+bir sıfat-fiilli yan cümle bulunmalı. Morph hard hedef dışı kişi/sayı/zaman değiştirmesin.
 Zaman hedef değilse farklı zaman ekleme. Zaman hedefse çelişen 'şu anda/dün'
 ifadelerini bir arada bırakma; karşıt biçimlerin ikisine de uyan doğal bağlam seç.
 Positive, morph_1 ve morph_2'nin kritik cümle DIŞINDAKİ bağlam cümleleri birebir
@@ -665,6 +727,8 @@ def evaluate(family, client, cfg, guard):
             r'^quality:morph_[12]:(?:context_changed|non_target_content_drift|strict_non_target_edit)$',
             r'^morph_[12]:positive_critical_lemma_mismatch$',
             r'^quality:morph_1:strict_lemma_changed$',
+            r'^quality:family:(?:subject_possessive_person_mismatch|template_(?:reported_speech|relative_clause)_mismatch)$',
+            r'^quality:morph_[12]:non_target_person_number_change$',
         )
         return [error for error in errors if any(re.match(pattern, error) for pattern in patterns)]
 
@@ -672,6 +736,7 @@ def evaluate(family, client, cfg, guard):
         errors = validate_family(item)
         if not errors:
             errors = list(guard(item))
+        errors += local_linguistic_warnings(item)
         if errors:
             events.append({'stage': 'local_validation', 'errors': errors})
             soft = soft_quality_errors(errors)

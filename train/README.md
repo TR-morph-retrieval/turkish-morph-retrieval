@@ -97,7 +97,8 @@ python3 train/workflow.py export --run-id pilot1000
 
 # Her yeni pilot kabulünü büyüyen pilot havuzuna ekle (kaynak run değişmez).
 python3 train/pilot_report.py merge --runs pilot5_train_v19 \
-  --existing train/data/pilot/pilot40.jsonl --output train/data/pilot/pilot45.jsonl
+  --existing train/archive/pilot/data/pilot40.jsonl \
+  --output train/archive/pilot/data/pilot45.jsonl
 
 # Nihai ortak plan: 5 kişi × 250 bağımsız family = 1.250 family.
 # Herkes aynı commit, kaynak, run-id, size ve seed ile bu yerel run'i hazırlar.
@@ -274,9 +275,11 @@ SQLite'ta slot durumları, denemeler, ret nedenleri, cache ve bütün çağrı o
 `report.json` ayrıca judge kararlarını (pass/fail/abstain), repair sayısını, sonuç nedenlerini,
 provider denemelerini ve bilinen maliyeti özetler; pilot kalitesi bu rapor üzerinden karşılaştırılır.
 
-Paylaşılan güncel pilot havuzu `train/data/pilot/pilot40.jsonl` dosyasındadır. Bu kayıtlar
+Tamamlanan pilot havuzu `train/archive/pilot/data/` altında arşivlenmiştir. Bu kayıtlar
 `pilot_only` ve `eligible_for_final_train=false` taşır; model eğitiminin final girdisine
-otomatik katılmaz. Yerel SQLite/run klasörleri Git'e gönderilmez.
+katılmaz. Geçmiş yerel SQLite/run klasörleri `train/archive/pilot/runs/` altında tutulur
+ve Git'e gönderilmez. Gerçek üretim temiz `train/runs/` alanında `train1250` run-id'siyle
+başlar; paylaşılan çıktılar yalnız `train/data/shards/` içine yazılır.
 
 Yerel run'lar arası kabul edilmiş train metinleri de duplicate kontrolüne katılır.
 Global yerel kilit iki üreticinin aynı anda kabul yazarak kopya kaçırmasını önler;

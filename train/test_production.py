@@ -6,7 +6,7 @@ from unittest.mock import patch
 from io import BytesIO
 from production import (load_config, policy, validate_family, evaluate, TransportError,
                         OpenRouter, judge_prompt, FACT_KEYS, materialize, checked_verdict,
-                        canonicalize_candidate_annotations)
+                        canonicalize_candidate_annotations, local_linguistic_warnings)
 
 
 def report(decision='pass', confidence=88, findings=None):
@@ -173,6 +173,47 @@ class ProductionTests(unittest.TestCase):
         self.assertIn('text:encoding_or_control_character', validate_family(x))
         x=deepcopy(FAMILY); x['candidates'][0]['slot']=[]
         self.assertTrue(validate_family(x))
+
+    def test_fast_linguistic_screens(self):
+        possessive = deepcopy(FAMILY)
+        possessive.update(template_id='reported_speech',
+                          query='Mahalle sakinleri sayaçlarımızdan gelen sızıntıyı bildirdiler.',
+                          query_critical_word='sayaçlarımızdan')
+        possessive['candidates'][0]['critical_word'] = 'sayaçlarımızdan'
+        possessive['candidates'][0]['critical_sentence'] = (
+            'Yetkililer sakinlerin sayaçlarımızdan gelen sızıntıyı bildirdiğini açıkladı.')
+        self.assertIn('quality:family:subject_possessive_person_mismatch',
+                      local_linguistic_warnings(possessive))
+
+        evidential = deepcopy(FAMILY)
+        evidential['target_feature'] = 'PRF.EVID'
+        evidential['candidates'][2]['morph_change'] = {
+            'feature': 'PRF.EVID',
+            'from': '-mışlar (öğrenilen geçmiş, çoğul)',
+            'to': '-dı (görülen geçmiş, tekil)',
+        }
+        self.assertIn('quality:morph_2:non_target_person_number_change',
+                      local_linguistic_warnings(evidential))
+
+        bad_template = deepcopy(FAMILY)
+        bad_template['template_id'] = 'relative_clause'
+        self.assertIn('quality:family:template_relative_clause_mismatch',
+                      local_linguistic_warnings(bad_template))
+
+    def test_fast_linguistic_warning_is_review_only_and_spends_no_repair(self):
+        f = deepcopy(FAMILY)
+        f.update(template_id='reported_speech',
+                 query='Mahalle sakinleri sayaçlarımızdan gelen sızıntıyı bildirdiler.',
+                 query_critical_word='sayaçlarımızdan')
+        f['candidates'][0]['critical_word'] = 'sayaçlarımızdan'
+        f['candidates'][0]['critical_sentence'] = (
+            'Yetkililer sakinlerin sayaçlarımızdan gelen sızıntıyı bildirdiğini açıkladı.')
+        out = evaluate(f, FakeClient(), load_config(), lambda _: [])
+        self.assertEqual(out['status'], 'accepted')
+        self.assertEqual(out['train_decision'], 'human_review')
+        self.assertEqual(out['repairs'], 0)
+        self.assertIn('quality:family:subject_possessive_person_mismatch',
+                      out['local_quality_warnings'])
 
     def test_accept_and_guard(self):
         self.assertEqual(evaluate(FAMILY, FakeClient(), load_config(), lambda x:[])['status'], 'accepted')

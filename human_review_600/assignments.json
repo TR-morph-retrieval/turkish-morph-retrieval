@@ -1,0 +1,38 @@
+[
+  {
+    "reviewer": "burak",
+    "producer": "claude",
+    "start": 1,
+    "end": 150,
+    "count": 150,
+    "human_review_priority": 63,
+    "source_sha256": "4c2fbf20b187e51b4fa7912a9be5b1d932e287ff6bd4f2718593802965ecdb07"
+  },
+  {
+    "reviewer": "kuzey",
+    "producer": "claude",
+    "start": 151,
+    "end": 300,
+    "count": 150,
+    "human_review_priority": 73,
+    "source_sha256": "d1b60411bdbe406714b3e205530abddb1de2414d4ecddf250a4b87e49e4c99ea"
+  },
+  {
+    "reviewer": "emir",
+    "producer": "codex",
+    "start": 1,
+    "end": 150,
+    "count": 150,
+    "human_review_priority": 74,
+    "source_sha256": "d18054a0c64d8db855318501bdcc6dfe456c1643e1cb6266c87234877f4e12c3"
+  },
+  {
+    "reviewer": "murat",
+    "producer": "codex",
+    "start": 151,
+    "end": 300,
+    "count": 150,
+    "human_review_priority": 86,
+    "source_sha256": "1bf8d468de9c1ae5c8d7630624c559f4c6704dfc6584ab8958df2f2c6bae5e2e"
+  }
+]
