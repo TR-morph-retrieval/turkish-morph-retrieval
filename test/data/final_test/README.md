@@ -26,3 +26,14 @@ Kontrol sonucu 150 benzersiz family, her family için `1 positive + 8 hard + 2 e
 aday yapısı ve geçerli gold kimliği doğrulandı. Kaynak review paketine göre 80 family'de
 metin veya anotasyon düzeltmesi vardır. Dosya SHA-256:
 `d4f9815361ae4982dd98536bcc1d4190f34aef992d49477c8a42e02497a2ec47`.
+
+## Burak — Claude 1–150
+
+- `burak_claude_001_150.fixed.jsonl`: insan kontrolü sonrası düzeltilmiş 150 family.
+
+Kontrol sonucu 150 benzersiz family, her family için `1 positive + 8 hard + 2 easy`
+aday yapısı ve geçerli gold kimliği doğrulandı. Kaynak review paketine göre 24 family'de
+düzeltme vardır. Dosya SHA-256:
+`f07c6110533e796268e99754d81b3cb6596f455222b8fa145279ee52839983b7`.
+
+Hazır insan kontrollü toplam: **450 family** (Emir 150 + Murat 150 + Burak 150).
