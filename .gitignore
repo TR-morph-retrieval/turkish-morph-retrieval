@@ -17,3 +17,10 @@ test/runs/
 
 # Provider response cache lives inside the ignored private run state.
 test/runs/*/cache/
+
+# Tokenizer probe: per-family predictions/logs and local virtualenvs stay local.
+experiments/tokenizer_probe/runs/
+experiments/tokenizer_probe/.venv*/
+experiments/tokenizer_probe/.vendor/
+experiments/tokenizer_probe/artifacts/
+debugging_logs.txt
