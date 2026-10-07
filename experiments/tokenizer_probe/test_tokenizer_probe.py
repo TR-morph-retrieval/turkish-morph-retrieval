@@ -150,7 +150,36 @@ class TokenizerPatchTest(unittest.TestCase):
             self.assertTrue(want <= cuts, (word, pieces, tokens))
 
 
+class RunConfigTest(unittest.TestCase):
+    def test_lr_override_needs_its_own_directory(self):
+        from experiments.tokenizer_probe.train_eval import PARAMS, resolve_run
+
+        params, out = resolve_run(None, None, Path("o"), 6)
+        self.assertEqual((params["learning_rate"], out), (PARAMS["learning_rate"], Path("o")))
+        with self.assertRaises(SystemExit):
+            resolve_run(1e-4, None, Path("o"), 6)
+        params, out = resolve_run(1e-4, "lr1e-4", Path("o"), 6)
+        self.assertEqual((params["learning_rate"], out), (1e-4, Path("o/lr1e-4")))
+
+
 class ReportTest(unittest.TestCase):
+    def test_incomplete_seeds_are_dropped(self):
+        import tempfile
+        from experiments.tokenizer_probe.report import load_runs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "zero_shot").mkdir()
+            ids = [f"f{i}" for i in range(4)]
+            (root / "zero_shot" / "base.json").write_text(json.dumps({"arm": "base", "per_query": [{"query_id": i} for i in ids]}))
+            for arm, seeds in (("base", (1, 2)), ("tt", (1,))):
+                (root / arm).mkdir()
+                for seed in seeds:
+                    (root / arm / f"fold0_seed{seed}.json").write_text(json.dumps(
+                        {"arm": arm, "seed": seed, "fold": 0, "per_query": [{"query_id": i} for i in ids]}))
+            _, lora = load_runs(root)
+            self.assertEqual({a: sorted(s) for a, s in lora.items()}, {"base": [1], "tt": [1]})
+
     def test_verdict_rule(self):
         from experiments.tokenizer_probe.report import cluster_bootstrap, verdict
         import numpy as np

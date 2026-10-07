@@ -215,6 +215,17 @@ def run_fold(arm, fold, seed, items, caches, manifest, model_name, params, out_d
         torch.cuda.empty_cache()
 
 
+def resolve_run(lr: float | None, tag: str | None, out: Path, epochs: int) -> tuple[dict[str, Any], Path]:
+    """Training params and output dir. A non-default lr must live in its own ``--tag`` directory,
+    otherwise the resume logic and the report would silently mix learning rates."""
+    params = {**PARAMS, "epochs": epochs}
+    if lr is not None and lr != PARAMS["learning_rate"]:
+        if not tag:
+            raise SystemExit("--lr varsayılandan farklıysa ayrı bir dizin için --tag verin (örn. --tag lr1e-4).")
+        params["learning_rate"] = lr
+    return params, (out / tag if tag else out)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("zero_shot", "folds", "all"), default="all")
@@ -223,6 +234,8 @@ def main() -> None:
     parser.add_argument("--seeds", nargs="+", type=int, default=[42])
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--epochs", type=int, default=PARAMS["epochs"])
+    parser.add_argument("--lr", type=float, default=None, help="learning rate override (needs --tag)")
+    parser.add_argument("--tag", default=None, help="sub-directory of --out, keeps variants apart")
     parser.add_argument("--artifacts", type=Path, default=ARTIFACTS)
     parser.add_argument("--out", type=Path, default=RUNS)
     parser.add_argument("--smoke", action="store_true", help="fold 0 only, tiny subsets, 1 epoch")
@@ -231,7 +244,7 @@ def main() -> None:
     args = parser.parse_args()
     global DEVICE
     DEVICE = "cpu" if args.cpu else None
-    params = {**PARAMS, "epochs": args.epochs}
+    params, args.out = resolve_run(args.lr, args.tag, args.out, args.epochs)
     items = load_items()
     caches = load_caches(args.artifacts)
     manifest = json.loads((args.artifacts / "split_manifest.json").read_text(encoding="utf-8"))

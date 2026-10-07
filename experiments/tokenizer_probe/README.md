@@ -24,3 +24,10 @@ ve sürekli ön-eğitim rejimini yanıtlamaz.
 - Kontrol kolları (`shift_*`, `rand_*`) morfem kollarından yaklaşık iki kat fazla parçalanma üretir (denetim tablosu);
   morfolojiye atıf için daha sıkı bir kontrol (eşit uzunluk artışlı SentencePiece örneklemesi) Aşama C'de gerekebilir.
 - Karar kuralı `report.py` içinde ön-kayıtlıdır (ΔMRR@10 ±0,03 bandı, lemma-kümeli bootstrap, Holm-McNemar).
+
+## Kapanış ölçütleri (sonuçlar görülmeden yazıldı)
+- C1 (seed 1 ve 2): 3 seed ortalamasında tt ve mph için ΔMRR@10 %95 CI üst sınırı +0,03'ün altında kalırsa "bu rejimde fayda yok".
+  Herhangi bir kol "etkili" kuralını geçerse sonuç kapanmaz, kontrol kolu (eşit uzunluk artışlı örnekleme) gerekir.
+- C2 (lr 1e-4, base ve tt): lr 1e-4'te tt − base farkı "etkili" kuralını geçmezse "düşük lr" itirazı kapanır.
+  Geçerse sonuç lr'ye bağlıdır; bu tek kolla genellenmez, ayrıca belirtilir.
+- Her iki rapor `experiments/reports/` altına konur; kapanış notu bu iki rapora dayanır.

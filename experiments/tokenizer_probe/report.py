@@ -42,7 +42,17 @@ def load_runs(runs: Path) -> tuple[dict[str, dict[str, dict]], dict[str, dict[in
         payload = json.loads(path.read_text(encoding="utf-8"))
         for row in payload["per_query"]:
             lora[payload["arm"]][payload["seed"]][row["query_id"]] = {**row, "_fold": payload["fold"]}
-    return zero, {a: dict(s) for a, s in lora.items()}
+    lora = {a: dict(s) for a, s in lora.items()}
+    # Only seeds that cover all families for every arm are comparable; a half-finished seed would
+    # silently shrink n through the family intersection.
+    total = len(next(iter(zero.values()))) if zero else 600
+    complete = [{seed for seed, rows in by_seed.items() if len(rows) == total} for by_seed in lora.values()]
+    common = set.intersection(*complete) if complete else set()
+    for arm, by_seed in lora.items():
+        dropped = sorted(set(by_seed) - common)
+        if dropped:
+            print(f"UYARI: {arm} için eksik/uyumsuz seed(ler) rapora alınmadı: {dropped}")
+    return zero, {a: {s: rows for s, rows in by_seed.items() if s in common} for a, by_seed in lora.items()}
 
 
 def per_family(rows_by_seed: dict[int, dict[str, dict]], metric: str) -> dict[str, float]:
@@ -99,10 +109,12 @@ def compare(lora, items_by_id, manifest) -> dict[str, dict[str, Any]]:
         fold_of = manifest["fold_of"]
         per_fold = [float(np.mean([d for d, i in zip(diff, ids) if fold_of[i] == k])) for k in range(manifest["n_folds"])
                     if any(fold_of[i] == k for i in ids)]
+        per_seed = {int(seed): float(np.mean([rows[i]["mrr@10"] - lora["base"][seed][i]["mrr@10"] for i in ids]))
+                    for seed, rows in lora[arm].items() if seed in lora["base"]}
         pvals[arm] = test["exact_p"]
         out[arm] = {"n": len(ids), "delta_mrr@10": float(diff.mean()), "ci95": [low, high],
                     "delta_recall@1": float(np.mean([arm_bin[i] - base_bin[i] for i in ids])), "mcnemar": test,
-                    "per_fold_delta_mrr": per_fold, "folds_positive": sum(d > 0 for d in per_fold),
+                    "per_fold_delta_mrr": per_fold, "per_seed_delta_mrr": per_seed, "folds_positive": sum(d > 0 for d in per_fold),
                     "diff_sd": float(diff.std(ddof=1)) if len(diff) > 1 else float("nan")}
     holm = holm_adjust(pvals) if pvals else {}
     for arm, info in out.items():
@@ -166,10 +178,11 @@ def write_markdown(path: Path, over, comparisons, phen, macro, objective) -> Non
              "| kol | aşama | n | recall@1 | MRR@10 | morph-hard pairwise acc | hardest-hard margin |", "|---|---|---|---|---|---|---|"]
     lines += [f"| {r['arm']} | {r['stage']} | {r['n']} | {r['recall@1']} | {r['mrr@10']} | {r['pairwise_morph_hard_accuracy']} | {r['hardest_hard_margin']} |" for r in over]
     lines += ["", "## Karar (ön-kayıtlı kural, base'e karşı, ΔMRR@10)", "",
-              "| kol | n | ΔMRR@10 | %95 CI (lemma-kümeli) | Δrecall@1 | McNemar p (Holm) | pozitif fold | karar |", "|---|---|---|---|---|---|---|---|"]
+              "| kol | n | ΔMRR@10 | %95 CI (lemma-kümeli) | Δrecall@1 | McNemar p (Holm) | pozitif fold | seed başına ΔMRR | karar |", "|---|---|---|---|---|---|---|---|---|"]
     for arm, c in comparisons.items():
         lines.append(f"| {arm} | {c['n']} | {c['delta_mrr@10']:+.4f} | [{c['ci95'][0]:+.4f}, {c['ci95'][1]:+.4f}] | {c['delta_recall@1']:+.4f} | "
-                     f"{c['p_holm']:.3f} | {c['folds_positive']}/{len(c['per_fold_delta_mrr'])} | {c['verdict']} |")
+                     f"{c['p_holm']:.3f} | {c['folds_positive']}/{len(c['per_fold_delta_mrr'])} | "
+                     f"{', '.join(f'{s}: {d:+.3f}' for s, d in sorted(c['per_seed_delta_mrr'].items()))} | {c['verdict']} |")
     if comparisons:
         sd = np.nanmean([c["diff_sd"] for c in comparisons.values()])
         lines += ["", f"Ölçülen aile-başı ΔMRR SD ≈ {sd:.3f}; n=600 için minimum saptanabilir etki ≈ {2.8 * sd / np.sqrt(600):.3f} (plan varsayımı 0,035)."]
