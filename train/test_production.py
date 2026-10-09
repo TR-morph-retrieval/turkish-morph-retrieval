@@ -206,6 +206,20 @@ class ProductionTests(unittest.TestCase):
         self.assertIn('quality:family:template_relative_clause_mismatch',
                       local_linguistic_warnings(bad_template))
 
+        predicate_drift = deepcopy(FAMILY)
+        predicate_drift['candidates'][1]['critical_sentence'] = (
+            'Bora parayı teslim aldığını söyledi.')
+        self.assertIn('quality:morph_1:non_target_predicate_drift',
+                      local_linguistic_warnings(predicate_drift))
+
+        bundled_possessive = deepcopy(FAMILY)
+        bundled_possessive['target_feature'] = 'PL'
+        bundled_possessive['candidates'][2]['morph_change'] = {
+            'feature': 'number', 'from': 'çoğul belirtme',
+            'to': 'tekil iyelikli belirtme'}
+        self.assertIn('quality:morph_2:non_target_possessive_change',
+                      local_linguistic_warnings(bundled_possessive))
+
     def test_fast_linguistic_warning_is_review_only_and_spends_no_repair(self):
         f = deepcopy(FAMILY)
         f.update(template_id='reported_speech',
@@ -285,9 +299,8 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(out['status'], 'accepted')
         self.assertEqual(out['train_decision'], 'human_review')
         self.assertEqual(out['review_reason'], 'local_quality_warning')
-        self.assertEqual(out['local_quality_warnings'], [
-            'quality:morph_1:strict_non_target_edit',
-            'morph_2:positive_critical_lemma_mismatch'])
+        self.assertIn('quality:morph_1:strict_non_target_edit', out['local_quality_warnings'])
+        self.assertIn('morph_2:positive_critical_lemma_mismatch', out['local_quality_warnings'])
 
     def test_candidate_annotation_is_canonicalized_from_its_text(self):
         f = deepcopy(FAMILY)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import hashlib
@@ -164,8 +165,23 @@ def local_linguistic_warnings(family):
         'POSS', 'AGR', 'PERSON', '1SG', '2SG', '3SG', '1PL', '2PL', '3PL', '.PL', '.SG'))
     person_terms = re.compile(
         r'\b(?:tekil|çoğul|birinci|ikinci|üçüncü|1\.|2\.|3\.|1sg|2sg|3sg|1pl|2pl|3pl)\b', re.I)
+    verbish = re.compile(
+        r'(?:mış|miş|muş|müş|acak|ecek|ıyor|iyor|uyor|üyor|dı|di|du|dü|tı|ti|tu|tü|'
+        r'dık|dik|duk|dük|tık|tik|tuk|tük|dığı|diği|duğu|düğü|tığı|tiği|tuğu|tüğü|'
+        r'arak|erek|madan|meden|ınca|ince|unca|ünce|ken|malı|meli|sa|se)'
+        r'(?:m|n|k|nız|niz|nuz|nüz|lar|ler|ım|im|um|üm|sın|sin|sun|sün|ız|iz|uz|üz)?$', re.I)
+
+    def non_target_tokens(candidate):
+        tokens = normalized(str(candidate.get('critical_sentence', ''))).split()
+        target_word = normalized(str(candidate.get('critical_word', '')))
+        if target_word in tokens:
+            tokens.remove(target_word)
+        return tokens
+
+    positive_tokens = non_target_tokens(by_slot.get('positive', {}))
     for slot in ('morph_1', 'morph_2'):
-        change = by_slot.get(slot, {}).get('morph_change')
+        candidate = by_slot.get(slot, {})
+        change = candidate.get('morph_change')
         if not isinstance(change, dict):
             continue
         before, after = str(change.get('from', '')), str(change.get('to', ''))
@@ -179,6 +195,18 @@ def local_linguistic_warnings(family):
         if not person_allowed and ((before_person and after_person and before_person != after_person)
                                    or explicit_number_change):
             warnings.append(f'quality:{slot}:non_target_person_number_change')
+        candidate_tokens = non_target_tokens(candidate)
+        removed = list((Counter(positive_tokens) - Counter(candidate_tokens)).elements())
+        added = list((Counter(candidate_tokens) - Counter(positive_tokens)).elements())
+        if target != 'MORPH.CONTEXT_AMBIG' and any(
+                verbish.search(token) for token in removed) and any(
+                verbish.search(token) for token in added):
+            warnings.append(f'quality:{slot}:non_target_predicate_drift')
+        if target != 'MORPH.CONTEXT_AMBIG' and 'POSS' not in target:
+            before_possessive = bool(re.search(r'iyelik|possessive|\bposs\b', before, re.I))
+            after_possessive = bool(re.search(r'iyelik|possessive|\bposs\b', after, re.I))
+            if before_possessive != after_possessive:
+                warnings.append(f'quality:{slot}:non_target_possessive_change')
     return warnings
 
 
@@ -732,6 +760,7 @@ def evaluate(family, client, cfg, guard):
             r'^quality:morph_1:strict_lemma_changed$',
             r'^quality:family:(?:subject_possessive_person_mismatch|template_(?:reported_speech|relative_clause)_mismatch)$',
             r'^quality:morph_[12]:non_target_person_number_change$',
+            r'^quality:morph_[12]:non_target_(?:predicate_drift|possessive_change)$',
         )
         return [error for error in errors if any(re.match(pattern, error) for pattern in patterns)]
 

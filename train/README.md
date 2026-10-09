@@ -188,7 +188,7 @@ Morph hard'larda hedef sözcük dışındaki kritik-cümle token örtüşmesi en
 (context ambiguity hariç); böylece nesne/katılımcı kayması yerel olarak elenir.
 Kod sözleşmesi değiştiğinden eski run sessizce devam etmez, yeni prepare gerekir.
 
-- İkisi de **pass, confidence ≥80** → kabul; daha düşük güven ret değil `human_review` uyarısıdır.
+- İkisi de **pass, confidence ≥85** → kabul; daha düşük güven ret değil `human_review` uyarısıdır.
 - Semantic judge somut adaya bağlı **fail, confidence ≥80** derse yalnız ilgili aday düzeltilir.
 - Morphology judge `fail` derse `%80–84` arası gerçek hakem anlaşmazlığı olarak
   `human_review`, `%85+` ise yalnız sorunlu adayı düzeltme kararıdır.
@@ -208,8 +208,8 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
 - Semantic judge, positive için query'deki altı bilgi alanını (`positive_fact_coverage`)
   ayrı ayrı raporlar; biri false veya belirsizse family kabul edilmez.
 - Somut hata bildirimi için eşik `%80`dir. İki judge da `pass` verirse ve
-  ikisinin güveni de en az `%80` ise karar `accept` olur. İkisi de `pass`
-  verdiği halde en az biri `%80` altında kalırsa karar `human_review` olur:
+  ikisinin güveni de en az `%85` ise karar `accept` olur. İkisi de `pass`
+  verdiği halde en az biri `%85` altında kalırsa karar `human_review` olur:
   family train'e girer; uyarı nedeni ve iki güven puanı kaydedilir. Güven,
   örneğin doğruluk yüzdesi değildir.
 - Semantik judge `pass`, morfoloji judge tek/iki aday için `%80–84` güvenle
@@ -227,6 +227,10 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
   annotation/örtüşme heuristic'lerinde sapma, train'de doğrudan ret değil
   `human_review` uyarısıdır; morfoloji judge'ı metinden yeniden denetler. Yerel filtre
   yalnız aşırı drift'i işaretler; yakın durumları judge değerlendirir.
+- Ücretsiz yerel drift denetimi, kritik hedef sözcük çıkarıldıktan sonra positive ile
+  morph adayında ikinci bir yüklem değişimini ve hedef POSS değilken eklenen/çıkarılan
+  iyelik özelliğini `human_review` olarak işaretler. `MORPH.CONTEXT_AMBIG`, farklı
+  çözümlemeyi zorlamak için yapıyı bilerek değiştirdiğinden bu kontrolden muaftır.
 - Semantic judge `query_claims` ve `positive_claims` tablolarını kendisi çıkarır;
   generator'ın `event_frame` bilgisi gold kanıtı sayılmaz. Özne/olay/yer/zaman/sonuç
   kayması varsa positive coverage false olur.
