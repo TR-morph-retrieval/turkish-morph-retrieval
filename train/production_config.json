@@ -1,5 +1,5 @@
 {
-  "version": "train-v24-single-low-relaxed-warnings",
+  "version": "train-v25-balanced-review-routing",
   "generation_mode": "single",
   "family_workers": 3,
   "composition_policy": {
@@ -29,7 +29,7 @@
     }
   },
   "confidence_threshold": 80,
-  "pass_confidence_threshold": 85,
+  "pass_confidence_threshold": 80,
   "max_repairs": 1,
   "max_judge_rounds": 2,
   "max_generation_attempts": 3,

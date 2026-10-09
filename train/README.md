@@ -188,8 +188,10 @@ Morph hard'larda hedef sözcük dışındaki kritik-cümle token örtüşmesi en
 (context ambiguity hariç); böylece nesne/katılımcı kayması yerel olarak elenir.
 Kod sözleşmesi değiştiğinden eski run sessizce devam etmez, yeni prepare gerekir.
 
-- İkisi de **pass** → kabul; confidence tek başına ret nedeni değildir.
-- Herhangi biri somut adaya bağlı **fail, confidence ≥80** → yalnız ilgili adayı düzelt.
+- İkisi de **pass, confidence ≥80** → kabul; daha düşük güven ret değil `human_review` uyarısıdır.
+- Semantic judge somut adaya bağlı **fail, confidence ≥80** derse yalnız ilgili aday düzeltilir.
+- Morphology judge `fail` derse `%80–84` arası gerçek hakem anlaşmazlığı olarak
+  `human_review`, `%85+` ise yalnız sorunlu adayı düzeltme kararıdır.
 - Hata bildiren düşük güvenli karar, abstain, eksik/çelişkili rapor → sınırlı tekrar, otomatik kabul yok.
 - **En fazla 2 judge turu / 1 düzeltme**, ardından ret.
 - Reddedilen family yerine **aynı slotta en fazla 3 generation denemesi**. Sonra `exhausted`;
@@ -206,14 +208,15 @@ otomatik etiketler kusursuz kabul edilmez, pilot örneklemesi önerilir.
 - Semantic judge, positive için query'deki altı bilgi alanını (`positive_fact_coverage`)
   ayrı ayrı raporlar; biri false veya belirsizse family kabul edilmez.
 - Somut hata bildirimi için eşik `%80`dir. İki judge da `pass` verirse ve
-  ikisinin güveni de en az `%85` ise karar `accept` olur. İkisi de `pass`
-  verdiği halde en az biri `%85` altında kalırsa karar `human_review` olur:
+  ikisinin güveni de en az `%80` ise karar `accept` olur. İkisi de `pass`
+  verdiği halde en az biri `%80` altında kalırsa karar `human_review` olur:
   family train'e girer; uyarı nedeni ve iki güven puanı kaydedilir. Güven,
   örneğin doğruluk yüzdesi değildir.
-- Semantik judge `pass`, morfoloji judge tek/iki aday için `fail` derse veya
-  ikisi `pass` deyip aynı adayın Türkçe doğallığında ayrışırsa karar
-  `human_review` olur; veri yine kabul edilir ve üretim durmaz. Çelişki
-  nedeni ve iki özgün judge raporu kayıtta kalır. Semantik judge'ın ikinci
+- Semantik judge `pass`, morfoloji judge tek/iki aday için `%80–84` güvenle
+  `fail` derse veya ikisi `pass` deyip aynı adayın Türkçe doğallığında
+  ayrışırsa karar `human_review` olur; veri yine kabul edilir ve üretim
+  durmaz. Morfoloji bulgusu `%85+` ise yalnız belirtilen aday onarılır.
+  Çelişki nedeni ve iki özgün judge raporu kayıtta kalır. Semantik judge'ın ikinci
   gold/positive kayması bulgusu ve yaygın morfoloji kusurları ise otomatik
   kabul edilmez; mevcut sınırlı düzeltme/ret politikası uygulanır.
 - Morphology judge'ın `natural=false` kararı açık hata olarak ele alınır;

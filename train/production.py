@@ -289,11 +289,14 @@ def policy(reports, valid_ids, threshold=80, pass_threshold=None):
     if any(not assess(v, valid_ids) for v in reports.values()):
         return {'action': 'retry', 'reason': 'invalid_judge_report'}
     decisions = {v['decision'] for v in reports.values()}
-    # A semantic fail may mean a second gold; never admit that as a warning.
-    # Widespread morphology failures likewise need a fresh family.
+    strong_repair_threshold = max(85, pass_threshold)
+    # A moderately confident morphology-only disagreement is useful review
+    # metadata. A strong, candidate-local finding is actionable instead: repair
+    # only that slot rather than sending an otherwise good family to a person.
     if (decisions == {'pass', 'fail'} and reports['semantic']['decision'] == 'pass'
             and reports['morphology']['decision'] == 'fail'
-            and len({f['candidate_id'] for f in reports['morphology']['findings']}) < 3):
+            and len({f['candidate_id'] for f in reports['morphology']['findings']}) < 3
+            and threshold <= reports['morphology']['confidence'] < strong_repair_threshold):
         return {'action': 'human_review', 'reason': 'judge_decision_disagreement'}
     failures = [v for v in reports.values() if v['decision'] == 'fail' and v['confidence'] >= threshold]
     if failures:

@@ -147,6 +147,7 @@ class ProductionTests(unittest.TestCase):
                 if settings['model'].startswith('z-ai/') and 'decision' in value:
                     cid = value['candidate_checks'][1]['candidate_id']
                     value['candidate_checks'][1]['checks']['natural'] = False
+                    value['confidence'] = 82
                     value['decision'] = 'fail'
                     value['findings'] = [{'candidate_id': cid, 'reason': 'Doğallık kuşkusu'}]
                 return value, provenance
@@ -154,6 +155,11 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(out['status'], 'accepted')
         self.assertEqual(out['train_decision'], 'human_review')
         self.assertEqual(out['review_reason'], 'judge_decision_disagreement')
+
+    def test_high_confidence_morphology_failure_repairs_only_named_candidate(self):
+        bad = report('fail', 90, [{'candidate_id': 'c1', 'reason': 'Ek zinciri bozuk'}])
+        decision = policy({'semantic': report(), 'morphology': bad}, {'c0', 'c1'}, 80, 80)
+        self.assertEqual(decision, {'action': 'repair', 'findings': bad['findings']})
 
     def test_naturalness_disagreement_is_review_flagged(self):
         ids = {'c0': 'positive'}
