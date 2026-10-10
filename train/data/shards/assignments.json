@@ -1,0 +1,493 @@
+{
+  "version": 1,
+  "run_id": "train1250",
+  "size": 1750,
+  "chunk_size": 20,
+  "contract_sha256": "d9178bbb012a71e6846ab7844403eec8e39bfc0725ff49f9323bd3879b1ee252",
+  "producers": [
+    "arda",
+    "burak",
+    "kuzey",
+    "emir",
+    "murat"
+  ],
+  "owner_ranges": [
+    {
+      "producer": "arda",
+      "from": 1,
+      "to": 750
+    },
+    {
+      "producer": "burak",
+      "from": 751,
+      "to": 1000
+    },
+    {
+      "producer": "kuzey",
+      "from": 1001,
+      "to": 1250
+    },
+    {
+      "producer": "emir",
+      "from": 1251,
+      "to": 1500
+    },
+    {
+      "producer": "murat",
+      "from": 1501,
+      "to": 1750
+    }
+  ],
+  "allocations": [
+    {
+      "producer": "arda",
+      "from": 1,
+      "to": 20
+    },
+    {
+      "producer": "arda",
+      "from": 21,
+      "to": 40
+    },
+    {
+      "producer": "arda",
+      "from": 41,
+      "to": 60
+    },
+    {
+      "producer": "arda",
+      "from": 61,
+      "to": 80
+    },
+    {
+      "producer": "arda",
+      "from": 81,
+      "to": 100
+    },
+    {
+      "producer": "arda",
+      "from": 101,
+      "to": 120
+    },
+    {
+      "producer": "arda",
+      "from": 121,
+      "to": 140
+    },
+    {
+      "producer": "arda",
+      "from": 141,
+      "to": 160
+    },
+    {
+      "producer": "arda",
+      "from": 161,
+      "to": 180
+    },
+    {
+      "producer": "arda",
+      "from": 181,
+      "to": 200
+    },
+    {
+      "producer": "arda",
+      "from": 201,
+      "to": 220
+    },
+    {
+      "producer": "arda",
+      "from": 221,
+      "to": 240
+    },
+    {
+      "producer": "arda",
+      "from": 241,
+      "to": 260
+    },
+    {
+      "producer": "arda",
+      "from": 261,
+      "to": 280
+    },
+    {
+      "producer": "arda",
+      "from": 281,
+      "to": 300
+    },
+    {
+      "producer": "arda",
+      "from": 301,
+      "to": 320
+    },
+    {
+      "producer": "arda",
+      "from": 321,
+      "to": 340
+    },
+    {
+      "producer": "arda",
+      "from": 341,
+      "to": 360
+    },
+    {
+      "producer": "arda",
+      "from": 361,
+      "to": 380
+    },
+    {
+      "producer": "arda",
+      "from": 381,
+      "to": 400
+    },
+    {
+      "producer": "arda",
+      "from": 401,
+      "to": 420
+    },
+    {
+      "producer": "arda",
+      "from": 421,
+      "to": 440
+    },
+    {
+      "producer": "arda",
+      "from": 441,
+      "to": 460
+    },
+    {
+      "producer": "arda",
+      "from": 461,
+      "to": 480
+    },
+    {
+      "producer": "arda",
+      "from": 481,
+      "to": 500
+    },
+    {
+      "producer": "arda",
+      "from": 501,
+      "to": 520
+    },
+    {
+      "producer": "arda",
+      "from": 521,
+      "to": 540
+    },
+    {
+      "producer": "arda",
+      "from": 541,
+      "to": 560
+    },
+    {
+      "producer": "arda",
+      "from": 561,
+      "to": 580
+    },
+    {
+      "producer": "arda",
+      "from": 581,
+      "to": 600
+    },
+    {
+      "producer": "arda",
+      "from": 601,
+      "to": 620
+    },
+    {
+      "producer": "arda",
+      "from": 621,
+      "to": 640
+    },
+    {
+      "producer": "arda",
+      "from": 641,
+      "to": 660
+    },
+    {
+      "producer": "arda",
+      "from": 661,
+      "to": 680
+    },
+    {
+      "producer": "arda",
+      "from": 681,
+      "to": 700
+    },
+    {
+      "producer": "arda",
+      "from": 701,
+      "to": 720
+    },
+    {
+      "producer": "arda",
+      "from": 721,
+      "to": 740
+    },
+    {
+      "producer": "arda",
+      "from": 741,
+      "to": 750
+    },
+    {
+      "producer": "burak",
+      "from": 751,
+      "to": 770
+    },
+    {
+      "producer": "burak",
+      "from": 771,
+      "to": 790
+    },
+    {
+      "producer": "burak",
+      "from": 791,
+      "to": 810
+    },
+    {
+      "producer": "burak",
+      "from": 811,
+      "to": 830
+    },
+    {
+      "producer": "burak",
+      "from": 831,
+      "to": 850
+    },
+    {
+      "producer": "burak",
+      "from": 851,
+      "to": 870
+    },
+    {
+      "producer": "burak",
+      "from": 871,
+      "to": 890
+    },
+    {
+      "producer": "burak",
+      "from": 891,
+      "to": 910
+    },
+    {
+      "producer": "burak",
+      "from": 911,
+      "to": 930
+    },
+    {
+      "producer": "burak",
+      "from": 931,
+      "to": 950
+    },
+    {
+      "producer": "burak",
+      "from": 951,
+      "to": 970
+    },
+    {
+      "producer": "burak",
+      "from": 971,
+      "to": 990
+    },
+    {
+      "producer": "burak",
+      "from": 991,
+      "to": 1000
+    },
+    {
+      "producer": "kuzey",
+      "from": 1001,
+      "to": 1020
+    },
+    {
+      "producer": "kuzey",
+      "from": 1021,
+      "to": 1040
+    },
+    {
+      "producer": "kuzey",
+      "from": 1041,
+      "to": 1060
+    },
+    {
+      "producer": "kuzey",
+      "from": 1061,
+      "to": 1080
+    },
+    {
+      "producer": "kuzey",
+      "from": 1081,
+      "to": 1100
+    },
+    {
+      "producer": "kuzey",
+      "from": 1101,
+      "to": 1120
+    },
+    {
+      "producer": "kuzey",
+      "from": 1121,
+      "to": 1140
+    },
+    {
+      "producer": "kuzey",
+      "from": 1141,
+      "to": 1160
+    },
+    {
+      "producer": "kuzey",
+      "from": 1161,
+      "to": 1180
+    },
+    {
+      "producer": "kuzey",
+      "from": 1181,
+      "to": 1200
+    },
+    {
+      "producer": "kuzey",
+      "from": 1201,
+      "to": 1220
+    },
+    {
+      "producer": "kuzey",
+      "from": 1221,
+      "to": 1240
+    },
+    {
+      "producer": "kuzey",
+      "from": 1241,
+      "to": 1250
+    },
+    {
+      "producer": "emir",
+      "from": 1251,
+      "to": 1270
+    },
+    {
+      "producer": "emir",
+      "from": 1271,
+      "to": 1290
+    },
+    {
+      "producer": "emir",
+      "from": 1291,
+      "to": 1310
+    },
+    {
+      "producer": "emir",
+      "from": 1311,
+      "to": 1330
+    },
+    {
+      "producer": "emir",
+      "from": 1331,
+      "to": 1350
+    },
+    {
+      "producer": "emir",
+      "from": 1351,
+      "to": 1370
+    },
+    {
+      "producer": "emir",
+      "from": 1371,
+      "to": 1390
+    },
+    {
+      "producer": "emir",
+      "from": 1391,
+      "to": 1410
+    },
+    {
+      "producer": "emir",
+      "from": 1411,
+      "to": 1430
+    },
+    {
+      "producer": "emir",
+      "from": 1431,
+      "to": 1450
+    },
+    {
+      "producer": "emir",
+      "from": 1451,
+      "to": 1470
+    },
+    {
+      "producer": "emir",
+      "from": 1471,
+      "to": 1490
+    },
+    {
+      "producer": "emir",
+      "from": 1491,
+      "to": 1500
+    },
+    {
+      "producer": "murat",
+      "from": 1501,
+      "to": 1520
+    },
+    {
+      "producer": "murat",
+      "from": 1521,
+      "to": 1540
+    },
+    {
+      "producer": "murat",
+      "from": 1541,
+      "to": 1560
+    },
+    {
+      "producer": "murat",
+      "from": 1561,
+      "to": 1580
+    },
+    {
+      "producer": "murat",
+      "from": 1581,
+      "to": 1600
+    },
+    {
+      "producer": "murat",
+      "from": 1601,
+      "to": 1620
+    },
+    {
+      "producer": "murat",
+      "from": 1621,
+      "to": 1640
+    },
+    {
+      "producer": "murat",
+      "from": 1641,
+      "to": 1660
+    },
+    {
+      "producer": "murat",
+      "from": 1661,
+      "to": 1680
+    },
+    {
+      "producer": "murat",
+      "from": 1681,
+      "to": 1700
+    },
+    {
+      "producer": "murat",
+      "from": 1701,
+      "to": 1720
+    },
+    {
+      "producer": "murat",
+      "from": 1721,
+      "to": 1740
+    },
+    {
+      "producer": "murat",
+      "from": 1741,
+      "to": 1750
+    }
+  ]
+}

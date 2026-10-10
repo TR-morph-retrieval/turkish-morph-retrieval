@@ -100,21 +100,23 @@ python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --existing train/archive/pilot/data/pilot40.jsonl \
   --output train/archive/pilot/data/pilot45.jsonl
 
-# Nihai ortak plan: 5 kişi × 250 bağımsız family = 1.250 family.
-# Herkes aynı commit, kaynak, run-id, size ve seed ile bu yerel run'i hazırlar.
+# Nihai ortak plan: Arda 750, diğer dört üretici 250'şer family = 1.750 family.
+# İlk 1.250 slot ve mevcut kabul kayıtları korunur; yalnız 1.251–1.750 eklenir.
 python3 train/workflow.py prepare --run-id train1250 \
   --source test/data/final_shards --size 1250 --seed 42
 
-# Koordinatör bir kez aralık sahipliğini oluşturur ve assignments.json'u pushlar:
-# arda 1–250, burak 251–500, kuzey 501–750, emir 751–1000, murat 1001–1250.
-python3 train/workflow.py shard-init --run-id train1250 --chunk-size 250 \
-  --producers arda,burak,kuzey,emir,murat --shard-dir train/data/shards
+# Koordinatör bir kez canlı run'i güvenli biçimde 1.750'ye uzatır ve 20'lik
+# push parçalarına ait assignments.json'u oluşturur:
+# arda 1–750, burak 751–1000, kuzey 1001–1250,
+# emir 1251–1500, murat 1501–1750.
+python3 train/extend_train_plan.py --run-id train1250 \
+  --shard-dir train/data/shards
 
 # Herkes aynı commit'i pull eder, aynı run-id/size/seed ile yerel run'ini hazırlar,
 # sonra assignments.json'da kendisine ait herhangi bir aralığı eşzamanlı üretir.
 python3 train/workflow.py shard-sync --run-id train1250 --shard-dir train/data/shards
-python3 train/workflow.py run --run-id train1250 --from-index 1 --to-index 250 --limit 250 --max-calls 1200
-python3 train/workflow.py shard-export --run-id train1250 --producer arda --from-index 1 --to-index 250 --output train/data/shards/arda_0001_0250.jsonl
+python3 train/workflow.py run --run-id train1250 --from-index 101 --to-index 120 --limit 20 --max-calls 240
+python3 train/workflow.py shard-export --run-id train1250 --producer arda --from-index 101 --to-index 120 --output train/data/shards/arda_0101_0120.jsonl
 python3 train/workflow.py shard-status --run-id train1250 --shard-dir train/data/shards
 # JSONL + sidecar manifest'i commit et. Push reddedilirse git pull --rebase yapıp
 # tekrar pushla; benzersiz shard dosyaları sayesinde veri üzerine yazılmaz.
@@ -125,8 +127,8 @@ python3 train/workflow.py shard-status --run-id train1250 --shard-dir train/data
 # yanlış üreticiyi, çakışan aralığı, farklı kod/config'i ve bozuk checksum'ı reddeder.
 
 Eğitim notebooku her bağımsız family için `query → positive` ve
-`positive → query` olmak üzere iki yön oluşturur. Dolayısıyla 1.250 family toplam
-2.500 yönlü çift sağlar; bunlar 2.500 bağımsız üretilmiş family diye raporlanmaz.
+`positive → query` olmak üzere iki yön oluşturur. Dolayısıyla 1.750 family toplam
+3.500 yönlü çift sağlar; bunlar 3.500 bağımsız üretilmiş family diye raporlanmaz.
 Deterministik validation ayrımından sonra yaklaşık `%90`ı eğitimde, `%10`u validation'da
 kalır; simetri yalnız train bölümüne uygulanır ve final test hiçbir aşamada eğitime girmez.
 
