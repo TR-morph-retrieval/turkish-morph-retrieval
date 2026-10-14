@@ -1,0 +1,37 @@
+{
+  "manifest_version": 1,
+  "run_id": "train1250",
+  "producer": "burak",
+  "from": 851,
+  "to": 870,
+  "family_count": 20,
+  "shard_file": "burak_0851_0870.jsonl",
+  "slot_ids": [
+    "train_000851",
+    "train_000852",
+    "train_000853",
+    "train_000854",
+    "train_000855",
+    "train_000856",
+    "train_000857",
+    "train_000858",
+    "train_000859",
+    "train_000860",
+    "train_000861",
+    "train_000862",
+    "train_000863",
+    "train_000864",
+    "train_000865",
+    "train_000866",
+    "train_000867",
+    "train_000868",
+    "train_000869",
+    "train_000870"
+  ],
+  "shard_sha256": "516671f3f7769818d773d14e3056ed92c6e17ea1a7d4106c6025eaea33f048db",
+  "run_contract": {
+    "contract_sha256": "d9178bbb012a71e6846ab7844403eec8e39bfc0725ff49f9323bd3879b1ee252",
+    "config": "train-v26-drift-aware-review"
+  },
+  "run_contract_sha256": "4363bb60f4bac081d1f659f8ef6bde47efacc70e2fc044f6a5e6fe3e7e62c252"
+}
