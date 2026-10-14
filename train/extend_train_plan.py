@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Safely extend the live 1,250-family train run to 1,750 families.
+"""Safely extend the live 1,250-family train run to 2,000 families.
 
 The existing 1,250 plan entries and accepted SQLite rows are preserved byte for
-byte.  Only new slots are appended.  A checked-in 20-family collaboration map
-is then written for the five agreed producer ranges.
+byte. Only new slots are appended in stable milestones. A checked-in 20-family
+collaboration map is then written for the agreed producer ranges.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import sqlite3
 from pathlib import Path
 
 from production import HERE, load_config
-from shards import json_sha, write_json
+from shards import json_sha, manifest_path, read_jsonl, sha256_bytes, write_json
 from workflow import atomic_json, contract, make_plan, read_json, run_lock, verify
 
 
@@ -23,7 +23,10 @@ OWNER_RANGES = [
     ("kuzey", 1001, 1250),
     ("emir", 1251, 1500),
     ("murat", 1501, 1750),
+    ("burak", 1751, 2000),
 ]
+
+MILESTONES = (1750, 2000)
 
 
 def chunked_allocations(chunk_size: int = 20):
@@ -37,15 +40,43 @@ def chunked_allocations(chunk_size: int = 20):
     return allocations
 
 
-def extend(folder: Path, shard_dir: Path, target_size: int = 1750, seed: int = 42):
+def migrate_existing_shard_contracts(folder: Path, shard_dir: Path, manifest: dict, plan: list):
+    """Retarget unchanged prefix shards after a plan-only append migration."""
+    contract_value = {
+        "contract_sha256": manifest["contract_sha256"],
+        "config": manifest["config"].get("version"),
+    }
+    migrated = 0
+    for shard in sorted(shard_dir.glob("*.jsonl")):
+        sidecar = manifest_path(shard)
+        if not sidecar.exists():
+            raise ValueError(f"Shard manifesti eksik: {sidecar}")
+        metadata = json.loads(sidecar.read_text(encoding="utf-8"))
+        if metadata.get("shard_sha256") != sha256_bytes(shard.read_bytes()):
+            raise ValueError(f"Shard checksum uyuşmuyor: {shard}")
+        start, end = metadata["from"], metadata["to"]
+        expected_ids = [spec["slot_id"] for spec in plan[start - 1:end]]
+        if metadata.get("slot_ids") != expected_ids or len(read_jsonl(shard)) != end - start + 1:
+            raise ValueError(f"Shard genişletilen planın değişmeyen önekiyle uyuşmuyor: {shard}")
+        metadata["run_contract"] = contract_value
+        metadata["run_contract_sha256"] = json_sha(contract_value)
+        write_json(sidecar, metadata)
+        migrated += 1
+    return migrated
+
+
+def extend(folder: Path, shard_dir: Path, target_size: int = 2000, seed: int = 42):
     manifest, protected, plan = verify(folder)
     original_size = len(plan)
-    if original_size not in {1250, target_size}:
-        raise ValueError(f"Beklenen plan boyutu 1250 veya {target_size}; bulunan {original_size}")
+    if original_size not in {1250, *MILESTONES}:
+        raise ValueError(f"Beklenen plan boyutu 1250/1750/2000; bulunan {original_size}")
 
-    if original_size < target_size:
-        extra = make_plan(protected, target_size - original_size, seed + original_size)
-        for offset, spec in enumerate(extra, start=original_size + 1):
+    for milestone in MILESTONES:
+        if len(plan) >= milestone or milestone > target_size:
+            continue
+        before = len(plan)
+        extra = make_plan(protected, milestone - before, seed + before)
+        for offset, spec in enumerate(extra, start=before + 1):
             spec["slot_id"] = f"train_{offset:06d}"
         extended = [*plan, *extra]
 
@@ -66,12 +97,18 @@ def extend(folder: Path, shard_dir: Path, target_size: int = 1750, seed: int = 4
             connection.close()
 
         manifest["contract_sha256"] = contract(load_config(), protected, extended)
+        history = manifest.setdefault("extension_history", [])
+        history.append({"from": before, "to": milestone})
         manifest["extended_from"] = original_size
-        manifest["extended_to"] = target_size
+        manifest["extended_to"] = milestone
         atomic_json(folder / "plan.json", extended)
         atomic_json(folder / "manifest.json", manifest)
         plan = extended
 
+    if len(plan) != target_size:
+        raise ValueError(f"Plan {target_size} family'ye uzatılamadı; bulunan {len(plan)}")
+
+    migrated_shards = migrate_existing_shard_contracts(folder, shard_dir, manifest, plan)
     allocations = chunked_allocations(20)
     expected = [i for item in allocations for i in range(item["from"], item["to"] + 1)]
     if expected != list(range(1, target_size + 1)):
@@ -82,7 +119,7 @@ def extend(folder: Path, shard_dir: Path, target_size: int = 1750, seed: int = 4
         "size": target_size,
         "chunk_size": 20,
         "contract_sha256": manifest["contract_sha256"],
-        "producers": [item[0] for item in OWNER_RANGES],
+        "producers": list(dict.fromkeys(item[0] for item in OWNER_RANGES)),
         "owner_ranges": [
             {"producer": producer, "from": start, "to": end}
             for producer, start, end in OWNER_RANGES
@@ -91,7 +128,8 @@ def extend(folder: Path, shard_dir: Path, target_size: int = 1750, seed: int = 4
     }
     write_json(shard_dir / "assignments.json", assignment)
     return {"run_id": folder.name, "size": len(plan), "assignment_sha256": json_sha(assignment),
-            "owner_ranges": assignment["owner_ranges"], "chunks": len(allocations)}
+            "owner_ranges": assignment["owner_ranges"], "chunks": len(allocations),
+            "migrated_shards": migrated_shards}
 
 
 def main():

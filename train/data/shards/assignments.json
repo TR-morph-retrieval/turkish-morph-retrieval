@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "train1250",
-  "size": 1750,
+  "size": 2000,
   "chunk_size": 20,
-  "contract_sha256": "d9178bbb012a71e6846ab7844403eec8e39bfc0725ff49f9323bd3879b1ee252",
+  "contract_sha256": "d228402db09d1e0dc42f6a5868d204c3ee24e63e846a30d4062951ff45d08d29",
   "producers": [
     "arda",
     "burak",
@@ -36,6 +36,11 @@
       "producer": "murat",
       "from": 1501,
       "to": 1750
+    },
+    {
+      "producer": "burak",
+      "from": 1751,
+      "to": 2000
     }
   ],
   "allocations": [
@@ -488,6 +493,71 @@
       "producer": "murat",
       "from": 1741,
       "to": 1750
+    },
+    {
+      "producer": "burak",
+      "from": 1751,
+      "to": 1770
+    },
+    {
+      "producer": "burak",
+      "from": 1771,
+      "to": 1790
+    },
+    {
+      "producer": "burak",
+      "from": 1791,
+      "to": 1810
+    },
+    {
+      "producer": "burak",
+      "from": 1811,
+      "to": 1830
+    },
+    {
+      "producer": "burak",
+      "from": 1831,
+      "to": 1850
+    },
+    {
+      "producer": "burak",
+      "from": 1851,
+      "to": 1870
+    },
+    {
+      "producer": "burak",
+      "from": 1871,
+      "to": 1890
+    },
+    {
+      "producer": "burak",
+      "from": 1891,
+      "to": 1910
+    },
+    {
+      "producer": "burak",
+      "from": 1911,
+      "to": 1930
+    },
+    {
+      "producer": "burak",
+      "from": 1931,
+      "to": 1950
+    },
+    {
+      "producer": "burak",
+      "from": 1951,
+      "to": 1970
+    },
+    {
+      "producer": "burak",
+      "from": 1971,
+      "to": 1990
+    },
+    {
+      "producer": "burak",
+      "from": 1991,
+      "to": 2000
     }
   ]
 }
