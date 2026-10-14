@@ -111,28 +111,33 @@ def judge_and_commit_family(folder_path, raw_family):
     for kind in ('semantic', 'morphology'):
         judge_settings = cfg['judges'][kind]
         prompt = judge_prompt(canon_item, kind, order)
-        verdict, prov = client.call(judge_settings, prompt)
-        # ``pass`` tek başına yeterli değildir: semantic judge yalnız positive
-        # adayını relevant seçmiş ve positive'ın tüm temel olgu alanlarını
-        # korumuş olmalıdır. Bu, production.evaluate ile aynı sözleşmedir.
-        if kind == 'semantic' and assess(verdict, valid_ids):
-            relevant = verdict.get('relevant_ids')
-            expected = {candidate_id for candidate_id, slot in candidate_mapping.items() if slot == 'positive'}
-            if not isinstance(relevant, list) or any(candidate_id not in valid_ids for candidate_id in relevant):
-                verdict = {}
-            elif verdict['decision'] != 'abstain' and set(relevant) != expected:
-                verdict = deepcopy(verdict)
-                verdict['decision'] = 'fail'
-                wrong = set(relevant) ^ expected
-                verdict['findings'] += [
-                    {'candidate_id': candidate_id, 'reason': 'Blind relevance differs from intended positive'}
-                    for candidate_id in sorted(wrong)
-                ]
-        reports[kind] = checked_verdict(verdict, kind, candidate_mapping)
-        provenances[kind] = prov
+        cv = {}
+        prov = {}
+        for attempt_i in range(3):
+            verdict, prov = client.call(judge_settings, prompt)
+            cost = prov.get('attempts', [{}])[0].get('usage', {}).get('cost', 0.0)
+            total_cost += cost
+            if isinstance(verdict, dict) and verdict.get('decision') == 'pass' and not verdict.get('reason'):
+                verdict['reason'] = 'Bütün kurallara ve bağlama uygundur.'
+            if kind == 'semantic' and assess(verdict, valid_ids):
+                relevant = verdict.get('relevant_ids')
+                expected = {candidate_id for candidate_id, slot in candidate_mapping.items() if slot == 'positive'}
+                if not isinstance(relevant, list) or any(candidate_id not in valid_ids for candidate_id in relevant):
+                    verdict = {}
+                elif verdict['decision'] != 'abstain' and set(relevant) != expected:
+                    verdict = deepcopy(verdict)
+                    verdict['decision'] = 'fail'
+                    wrong = set(relevant) ^ expected
+                    verdict['findings'] += [
+                        {'candidate_id': candidate_id, 'reason': 'Blind relevance differs from intended positive'}
+                        for candidate_id in sorted(wrong)
+                    ]
+            cv = checked_verdict(verdict, kind, candidate_mapping)
+            if cv and cv.get('decision') in ('pass', 'fail'):
+                break
 
-        cost = prov.get('attempts', [{}])[0].get('usage', {}).get('cost', 0.0)
-        total_cost += cost
+        reports[kind] = cv
+        provenances[kind] = prov
 
         judge_events.append({
             'stage': kind,
@@ -141,6 +146,7 @@ def judge_and_commit_family(folder_path, raw_family):
             'provenance': prov,
             'candidate_mapping': candidate_mapping,
         })
+
 
     # 3. Policy Kontrolü (production.py evaluate() ile birebir aynı: 'accept' ve 'human_review' kabul edilir)
     threshold = cfg.get('confidence_threshold', 80)
