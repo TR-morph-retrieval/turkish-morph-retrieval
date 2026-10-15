@@ -7,7 +7,7 @@ class ExtendTrainPlanTests(unittest.TestCase):
     def test_twenty_family_chunks_cover_each_owner_range_once(self):
         allocations = chunked_allocations(20)
         actual = [i for item in allocations for i in range(item['from'], item['to'] + 1)]
-        self.assertEqual(actual, list(range(1, 2001)))
+        self.assertEqual(actual, list(range(1, 2251)))
         self.assertEqual(len(actual), len(set(actual)))
         for producer, start, end in OWNER_RANGES:
             owned = [item for item in allocations

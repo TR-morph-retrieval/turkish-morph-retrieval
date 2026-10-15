@@ -100,15 +100,15 @@ python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --existing train/archive/pilot/data/pilot40.jsonl \
   --output train/archive/pilot/data/pilot45.jsonl
 
-# Nihai ortak plan: ilk dağılıma Burak için 250 ek family eklenir = 2.000 family.
-# İlk 1.750 slot ve mevcut kabul kayıtları korunur; yalnız 1.751–2.000 eklenir.
+# Nihai ortak plan: ilk dağılıma Burak için iki kez 250 ek family eklenir = 2.250 family.
+# İlk 2.000 slot ve mevcut kabul kayıtları korunur; yalnız 2.001–2.250 eklenir.
 python3 train/workflow.py prepare --run-id train1250 \
   --source test/data/final_shards --size 1250 --seed 42
 
-# Koordinatör canlı run'i güvenli biçimde 2.000'e uzatır ve 20'lik
+# Koordinatör canlı run'i güvenli biçimde 2.250'ye uzatır ve 20'lik
 # push parçalarına ait assignments.json'u oluşturur:
 # arda 1–750, burak 751–1000, kuzey 1001–1250,
-# emir 1251–1500, murat 1501–1750, burak ek olarak 1751–2000.
+# emir 1251–1500, murat 1501–1750, burak ek olarak 1751–2250.
 python3 train/extend_train_plan.py --run-id train1250 \
   --shard-dir train/data/shards
 
@@ -127,8 +127,8 @@ python3 train/workflow.py shard-status --run-id train1250 --shard-dir train/data
 # yanlış üreticiyi, çakışan aralığı, farklı kod/config'i ve bozuk checksum'ı reddeder.
 
 Eğitim notebooku her bağımsız family için `query → positive` ve
-`positive → query` olmak üzere iki yön oluşturur. Dolayısıyla 2.000 family toplam
-4.000 yönlü çift sağlar; bunlar 4.000 bağımsız üretilmiş family diye raporlanmaz.
+`positive → query` olmak üzere iki yön oluşturur. Dolayısıyla 2.250 family toplam
+4.500 yönlü çift sağlar; bunlar 4.500 bağımsız üretilmiş family diye raporlanmaz.
 Deterministik validation ayrımından sonra yaklaşık `%90`ı eğitimde, `%10`u validation'da
 kalır; simetri yalnız train bölümüne uygulanır ve final test hiçbir aşamada eğitime girmez.
 
