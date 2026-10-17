@@ -1,0 +1,203 @@
+{
+  "dataset_name": "turkish_morph_retrieval_test",
+  "version": "4.0.0",
+  "seed": 20261017,
+  "slot_index_offset": 600,
+  "targets": {
+    "development": 100,
+    "sealed_test": 500
+  },
+  "candidate_counts": {
+    "positive": 1,
+    "hard_negative": 8,
+    "easy_negative": 2
+  },
+  "family_mode_distribution": {
+    "strict_minimal": 0.25,
+    "controlled_diverse": 0.45,
+    "natural_retrieval": 0.3
+  },
+  "query_expression_distribution": {
+    "morph_explicit": 0.5,
+    "semantic_paraphrase": 0.5
+  },
+  "query_gold_lexical_distribution": {
+    "high": 0.3,
+    "medium": 0.4,
+    "low": 0.3
+  },
+  "query_sentence_distribution": {
+    "1": 0.75,
+    "2": 0.25
+  },
+  "passage_sentence_distribution": {
+    "1": 0.3,
+    "2": 0.3,
+    "3": 0.3,
+    "4": 0.1
+  },
+  "generalization_distribution": {
+    "standard": 0.4,
+    "lemma_holdout": 0.2,
+    "template_holdout": 0.2,
+    "composition_holdout": 0.2
+  },
+  "non_composition_chain_rate": 0.25,
+  "single_allomorph_rate": 0.1666666667,
+  "domain_shift_fraction": 0.2,
+  "quality": {
+    "candidate_token_ratio_max": 1.65,
+    "gold_to_median_token_ratio_max": 1.25,
+    "near_duplicate_jaccard_max": 0.82,
+    "cross_family_candidate_jaccard_max": 0.9,
+    "cross_family_easy_gold_jaccard_max": 0.75,
+    "train_test_jaccard_max": 0.85,
+    "max_abstract_template_reuse": 4,
+    "query_gold_token_edits_min": 2,
+    "query_gold_token_sequence_ratio_max": 0.82,
+    "query_gold_lexical_bands": {
+      "high": {
+        "min": 0.55,
+        "max": 1
+      },
+      "medium": {
+        "min": 0.3,
+        "max": 0.7
+      },
+      "low": {
+        "min": 0,
+        "max": 0.45
+      }
+    },
+    "family_mode_lexical_gates": {
+      "strict_minimal": {
+        "hards_at_or_above_gold_min": 4,
+        "gold_hard_median_gap_max": 0.15,
+        "content_preserving_hards_min": 4
+      },
+      "controlled_diverse": {
+        "hards_at_or_above_gold_min": 3,
+        "gold_hard_median_gap_max": 0.25,
+        "content_preserving_hards_min": 3
+      },
+      "natural_retrieval": {
+        "hards_at_or_above_gold_min": 2,
+        "gold_hard_median_gap_max": 0.35,
+        "content_preserving_hards_min": 2
+      }
+    },
+    "hard_query_content_recall_min": 0.6,
+    "freeze_tie_aware_word_overlap_recall_at_1_max": 0.2,
+    "freeze_tie_aware_character_3gram_recall_at_1_max": 0.3,
+    "freeze_tie_aware_bm25_recall_at_1_max": 0.3,
+    "judge_naturalness_min": 4,
+    "candidate_naturalness_min": 4,
+    "semantic_relevance_confidence_min": 85,
+    "semantic_quality_confidence_min": 85,
+    "morphology_judge_confidence_min": 85,
+    "human_review_confidence_floor": 60
+  },
+  "generation": {
+    "max_generation_attempts": 2,
+    "refill_rounds_per_call": 3,
+    "batch_size": 3,
+    "workers": 4,
+    "generators": [
+      {
+        "id": "generator_a",
+        "provider": "codex_cli",
+        "model": "${TEST_CODEX_GENERATOR_MODEL:-gpt-5.6-sol}",
+        "authentication_mode": "chatgpt_subscription",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 1800
+      },
+      {
+        "id": "generator_b",
+        "provider": "claude_cli",
+        "model": "${TEST_CLAUDE_GENERATOR_MODEL:-claude-opus-5}",
+        "authentication_mode": "claude_subscription",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 1800
+      }
+    ],
+    "judges": {
+      "semantic": {
+        "provider": "openrouter",
+        "model": "${TEST_SEMANTIC_JUDGE_MODEL:-deepseek/deepseek-v4-flash-0731}",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "base_url": "https://openrouter.ai/api/v1/chat/completions",
+        "temperature": 0,
+        "max_tokens": 2600,
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        },
+        "plugins": [
+          {
+            "id": "response-healing"
+          }
+        ],
+        "requests_per_minute": 30,
+        "timeout_seconds": 180,
+        "permutations": [
+          "a"
+        ],
+        "provider_preferences": {
+          "require_parameters": true,
+          "sort": "latency",
+          "data_collection": "deny",
+          "zdr": true
+        }
+      },
+      "morphology": {
+        "provider": "openrouter",
+        "model": "${TEST_MORPHOLOGY_JUDGE_MODEL:-z-ai/glm-5.3-flash}",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "base_url": "https://openrouter.ai/api/v1/chat/completions",
+        "temperature": 0,
+        "max_tokens": 2600,
+        "reasoning": {
+          "effort": "low",
+          "exclude": true
+        },
+        "plugins": [
+          {
+            "id": "response-healing"
+          }
+        ],
+        "requests_per_minute": 30,
+        "timeout_seconds": 180,
+        "provider_preferences": {
+          "require_parameters": true,
+          "sort": "latency",
+          "data_collection": "deny",
+          "zdr": true
+        }
+      },
+      "adjudicator": {
+        "enabled": false,
+        "provider": "openrouter",
+        "model": "",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "base_url": "https://openrouter.ai/api/v1/chat/completions",
+        "temperature": 0,
+        "max_tokens": 1400,
+        "requests_per_minute": 20,
+        "timeout_seconds": 180,
+        "provider_preferences": {
+          "require_parameters": true,
+          "data_collection": "deny",
+          "zdr": true
+        }
+      }
+    },
+    "human_review": {
+      "reviewers_required": 1,
+      "stage": "final_freeze_only"
+    },
+    "require_distinct_model_families": true,
+    "forbidden_model_families_for_test": [
+      "google"
+    ]
+  }
+}

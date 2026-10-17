@@ -1,0 +1,37 @@
+{
+  "manifest_version": 1,
+  "run_id": "train1250",
+  "producer": "arda",
+  "from": 2001,
+  "to": 2020,
+  "family_count": 20,
+  "shard_file": "arda_2001_2020.jsonl",
+  "slot_ids": [
+    "train_002001",
+    "train_002002",
+    "train_002003",
+    "train_002004",
+    "train_002005",
+    "train_002006",
+    "train_002007",
+    "train_002008",
+    "train_002009",
+    "train_002010",
+    "train_002011",
+    "train_002012",
+    "train_002013",
+    "train_002014",
+    "train_002015",
+    "train_002016",
+    "train_002017",
+    "train_002018",
+    "train_002019",
+    "train_002020"
+  ],
+  "shard_sha256": "58a846103a53491ba814c81243d59bb43f5d4d15bb07fc8e809a809e3f69aa67",
+  "run_contract": {
+    "contract_sha256": "a2dbeeecc36fb26975554c0dd2092e25b2c26664138c3895de6747b35a88b1ef",
+    "config": "train-v26-drift-aware-review"
+  },
+  "run_contract_sha256": "b0e73c597e5eecb5edf6716a310f8c1577a6dd0471e4435549280f519cc6b7cb"
+}

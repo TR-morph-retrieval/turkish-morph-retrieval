@@ -522,7 +522,12 @@ class DatasetMemory:
         problems = []
         if frame and any(str(row["semantic_frame_id"] or "").strip() == frame for row in rows):
             problems.append(f"dataset memory semantic_frame tekrarı: {frame}")
-        external = [row for row in rows if row["source_dataset"] != "current_run"]
+        # Earlier releases of the same benchmark help lexical/narrative diversity, but are not
+        # train/external data. They must not invalidate test-only holdout buckets in an extension.
+        external = [
+            row for row in rows
+            if row["source_dataset"] not in {"current_run", "prior_test_release"}
+        ]
         if bucket == "lemma_holdout" and lemma and any(
             _tr_key(row["critical_lemma"]) == lemma for row in external
         ):

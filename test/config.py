@@ -103,6 +103,8 @@ def validate_config(cfg: dict[str, Any], runtime: bool = False) -> None:
         raise ConfigError("Dondurulmuş plan 600 slot olmalı (600 sealed veya 100 dev + 500 sealed)")
     if "oversample_factor" in targets:
         raise ConfigError("Statik oversampling kaldırıldı; plan doğrudan 600 slot olmalı")
+    if int(cfg.get("slot_index_offset", 0)) < 0:
+        raise ConfigError("slot_index_offset negatif olamaz")
     _check_distribution("query_sentence_distribution", cfg["query_sentence_distribution"])
     _check_distribution("passage_sentence_distribution", cfg["passage_sentence_distribution"])
     _check_distribution("family_mode_distribution", cfg["family_mode_distribution"])

@@ -283,7 +283,10 @@ def make_slot(index: int, cfg: dict[str, Any]) -> dict[str, Any]:
 
 def build_plan(cfg: dict[str, Any], size: int | None = None) -> list[dict[str, Any]]:
     full_size = max(final_target(cfg), size or 0)
-    slots = _balance_features([make_slot(index, cfg) for index in range(full_size)], cfg)
+    offset = int(cfg.get("slot_index_offset", 0))
+    slots = _balance_features(
+        [make_slot(index, cfg) for index in range(offset, offset + full_size)], cfg
+    )
     return slots[:size] if size is not None else slots
 
 
