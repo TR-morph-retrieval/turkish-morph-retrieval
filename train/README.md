@@ -60,10 +60,13 @@ etiketleri tarihsel plan metadata'sıdır. Bu train ile görülen zincirler içi
 Kota train'e aittir; testin aday sayısı veya split'i bu kod tarafından değiştirilmez.
 Final eğitim notebook'u gerektiğinde train içinden family-id hash'iyle sabit `%90 train / %10
 development` ayırır. `train_morph_encoder_train1250_colab.ipynb` karşılaştırma koşusu ise
-ilk 1.250 final family'nin tamamını ileri yönde, deterministik yarısını ayrıca ters yönde
-eğitime alarak 1.875 çift üretir;
+çalıştırıldığı commit'teki bütün final shard'larını ileri yönde, deterministik yarısını ayrıca
+ters yönde eğitime alır;
 önceden sabitlenmiş feature-dengeli 100 benchmark family'sini development, kalan 500'ü
-yalnız final test olarak kullanır.
+yalnız final test olarak kullanır. Varsayılan E5-large koşusu rank-32 LoRA ile yaklaşık
+`%2–3` parametreyi eğitir; checkpoint validation MRR@10 ile seçilir. Eğitim bittikten sonra
+base ve LoRA modelleri TabiBench'in resmî beş Türkçe belge-retrieval veri kaynağında
+haricî zero-shot koruma testine girer; bu sonuçlar checkpoint seçimine geri beslenmez.
 
 ## Komutlar (repo kökünden)
 
@@ -272,7 +275,7 @@ judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 ## Dosyalar / kayıt
 
 - `notebooks/train_morph_encoder_colab.ipynb`: tek seçilmiş encoder için kontrollü LoRA eğitimi ve development/final değerlendirme.
-- `notebooks/train_morph_encoder_train1250_colab.ipynb`: mevcut shard'lardan sabit 1.250 final family seçer, 1.875 yarı-simetrik çiftle seçilen encoder'ı (TabiBERT dâhil) eğitir; validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini sabit 100 development + 500 final test üzerinde karşılaştırır.
+- `notebooks/train_morph_encoder_train1250_colab.ipynb`: mevcut bütün final shard'larını %50 ters-yön örneklemesiyle E5-large üzerinde eğitir; validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini sabit 100 development + 500 final test üzerinde karşılaştırır ve ardından bağımsız TabiBench retrieval koruma kontrolünü çalıştırır.
 - `notebooks/train_morph_encoder_compare5_colab.ipynb`: beş encoder'ı aynı protokolle sırayla eğitir; önce development metriklerini, ardından beşinin de sealed-test metriklerini tek tabloda raporlar. Test sonucu hiperparametre seçimine geri beslenmez.
 
 - `production.py`: API, generator/judge promptları, kabul ve aday düzeltmesi.
