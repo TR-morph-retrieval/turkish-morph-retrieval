@@ -59,8 +59,8 @@ etiketleri tarihsel plan metadata'sıdır. Bu train ile görülen zincirler içi
 "unseen-chain zero-shot" iddiası kurulmaz. Kök–zincir grupları ayrıca doğrulanıp raporlanır.
 Kota train'e aittir; testin aday sayısı veya split'i bu kod tarafından değiştirilmez.
 Final eğitim notebook'u gerektiğinde train içinden family-id hash'iyle sabit `%90 train / %10
-development` ayırır. `train_morph_encoder_train1000_colab.ipynb` karşılaştırma koşusu ise
-ilk 1.000 final family'nin tamamını eğitime alır, simetriyle 2.000 yönlü çift üretir;
+development` ayırır. `train_morph_encoder_train1250_colab.ipynb` karşılaştırma koşusu ise
+ilk 1.250 final family'nin tamamını eğitime alır, simetriyle 2.500 yönlü çift üretir;
 önceden sabitlenmiş feature-dengeli 100 benchmark family'sini development, kalan 500'ü
 yalnız final test olarak kullanır.
 
@@ -270,7 +270,7 @@ judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 ## Dosyalar / kayıt
 
 - `notebooks/train_morph_encoder_colab.ipynb`: tek seçilmiş encoder için kontrollü LoRA eğitimi ve development/final değerlendirme.
-- `notebooks/train_morph_encoder_train1000_colab.ipynb`: mevcut shard'lardan sabit 1.000 final family seçer, 2.000 simetrik çiftle tek encoder eğitir ve zero-shot/LoRA gelişimini sabit 100 development + 500 final test üzerinde karşılaştırır.
+- `notebooks/train_morph_encoder_train1250_colab.ipynb`: mevcut shard'lardan sabit 1.250 final family seçer, 2.500 simetrik çiftle tek encoder eğitir ve zero-shot/LoRA gelişimini sabit 100 development + 500 final test üzerinde karşılaştırır.
 - `notebooks/train_morph_encoder_compare5_colab.ipynb`: beş encoder'ı aynı protokolle sırayla eğitir; önce development metriklerini, ardından beşinin de sealed-test metriklerini tek tabloda raporlar. Test sonucu hiperparametre seçimine geri beslenmez.
 
 - `production.py`: API, generator/judge promptları, kabul ve aday düzeltmesi.

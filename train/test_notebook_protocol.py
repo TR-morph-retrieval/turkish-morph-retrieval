@@ -24,7 +24,7 @@ class NotebookProtocolTest(unittest.TestCase):
         paths = [
             "test/notebooks/morph_baseline_eval_600_colab.ipynb",
             "train/notebooks/train_morph_encoder_colab.ipynb",
-            "train/notebooks/train_morph_encoder_train1000_colab.ipynb",
+            "train/notebooks/train_morph_encoder_train1250_colab.ipynb",
             "train/notebooks/train_morph_encoder_compare5_colab.ipynb",
         ]
 
