@@ -1,0 +1,37 @@
+{
+  "manifest_version": 1,
+  "run_id": "train1250",
+  "producer": "emir",
+  "from": 1411,
+  "to": 1430,
+  "family_count": 20,
+  "shard_file": "emir_1411_1430.jsonl",
+  "slot_ids": [
+    "train_001411",
+    "train_001412",
+    "train_001413",
+    "train_001414",
+    "train_001415",
+    "train_001416",
+    "train_001417",
+    "train_001418",
+    "train_001419",
+    "train_001420",
+    "train_001421",
+    "train_001422",
+    "train_001423",
+    "train_001424",
+    "train_001425",
+    "train_001426",
+    "train_001427",
+    "train_001428",
+    "train_001429",
+    "train_001430"
+  ],
+  "shard_sha256": "ebe6fb5cb06e532894b2ca6a0f196f279bc10231597ac0c967449429bcde6ac9",
+  "run_contract": {
+    "contract_sha256": "a2dbeeecc36fb26975554c0dd2092e25b2c26664138c3895de6747b35a88b1ef",
+    "config": "train-v26-drift-aware-review"
+  },
+  "run_contract_sha256": "b0e73c597e5eecb5edf6716a310f8c1577a6dd0471e4435549280f519cc6b7cb"
+}
