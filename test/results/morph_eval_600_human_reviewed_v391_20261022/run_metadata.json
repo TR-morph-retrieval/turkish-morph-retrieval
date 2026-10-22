@@ -1,0 +1,88 @@
+{
+  "dataset_mode": "frozen_100_dev_500_test",
+  "dataset_file": "/content/turkish-morph-retrieval/test/data/final_test/morph_test_600_human_reviewed.json",
+  "dataset_sha256": "53ef9cd3aec930c0d897210922be288e7b97270c9d2d346caee5eb51fd7d139e",
+  "evaluation_code_sha256": "ba845f5efc059869f2880ac4d70ef561e6ec7a0ab6ddb10112b91499e467fc05",
+  "evaluation_api": "3.3",
+  "git_commit": "3f97e3a2c17cea8e6a2b687e95f7889cc159061f",
+  "full_run_depth": 50,
+  "family_count": 600,
+  "seed": 42,
+  "bootstrap_draws": 10000,
+  "model_specs": [
+    {
+      "name": "e5-large",
+      "repo": "intfloat/multilingual-e5-large",
+      "query_prefix": "query: ",
+      "document_prefix": "passage: ",
+      "enabled": true
+    },
+    {
+      "name": "bge-m3",
+      "repo": "BAAI/bge-m3",
+      "query_prefix": "",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "modernbert-tr",
+      "repo": "ytu-ce-cosmos/modernbert-tr-embed",
+      "query_prefix": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "trmteb-ft-110m",
+      "repo": "trmteb/turkish-embedding-model-fine-tuned",
+      "query_prefix": "",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "mursit-base-tr",
+      "repo": "newmindai/Mursit-Base-TR-Retrieval",
+      "query_prefix": "",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "gte-multilingual-base",
+      "repo": "Alibaba-NLP/gte-multilingual-base",
+      "query_prefix": "",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "arctic-embed-m-v2",
+      "repo": "Snowflake/snowflake-arctic-embed-m-v2.0",
+      "query_prefix": "query: ",
+      "document_prefix": "",
+      "enabled": true
+    },
+    {
+      "name": "jina-embeddings-v3",
+      "repo": "jinaai/jina-embeddings-v3",
+      "query_prefix": "Represent the query for retrieving evidence documents: ",
+      "document_prefix": "Represent the document for retrieval: ",
+      "enabled": true,
+      "dtype": "bfloat16"
+    },
+    {
+      "name": "embeddinggemma-300m",
+      "repo": "google/embeddinggemma-300m",
+      "query_prefix": "task: search result | query: ",
+      "document_prefix": "title: none | text: ",
+      "enabled": true,
+      "dtype": "bfloat16"
+    },
+    {
+      "name": "qwen3-8b",
+      "repo": "Qwen/Qwen3-Embedding-8B",
+      "query_prefix": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+      "document_prefix": "",
+      "enabled": true,
+      "dtype": "float16"
+    }
+  ],
+  "notice": "FROZEN: insan-kontrollü 600-family final benchmark (v3.9.1)."
+}
