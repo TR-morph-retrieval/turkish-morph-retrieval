@@ -59,8 +59,8 @@ etiketleri tarihsel plan metadata'sıdır. Bu train ile görülen zincirler içi
 "unseen-chain zero-shot" iddiası kurulmaz. Kök–zincir grupları ayrıca doğrulanıp raporlanır.
 Kota train'e aittir; testin aday sayısı veya split'i bu kod tarafından değiştirilmez.
 Final eğitim notebook'u gerektiğinde train içinden family-id hash'iyle sabit `%90 train / %10
-development` ayırır. `train_morph_encoder_train1250_colab.ipynb` karşılaştırma koşusu ise
-çalıştırıldığı commit'teki bütün final shard'larını ileri yönde, deterministik yarısını ayrıca
+development` ayırır. `train_morph_encoder_train2000_colab.ipynb` karşılaştırma koşusu ise
+slot sırasındaki ilk 2.000 uygun final family'yi ileri yönde, deterministik yarısını ayrıca
 ters yönde eğitime alır;
 önceden sabitlenmiş feature-dengeli 100 benchmark family'sini development, kalan 500'ü
 yalnız final test olarak kullanır. Varsayılan E5-large koşusu rank-32 LoRA ile yaklaşık
@@ -275,7 +275,7 @@ judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 ## Dosyalar / kayıt
 
 - `notebooks/train_morph_encoder_colab.ipynb`: tek seçilmiş encoder için kontrollü LoRA eğitimi ve development/final değerlendirme.
-- `notebooks/train_morph_encoder_train1250_colab.ipynb`: tam 2.000 `accepted`/`human_review` final family'yi (fazlası varsa slot sırasındaki ilk 2.000'i) %50 ters-yön örneklemesiyle E5-large üzerinde eğitir; `reject` ve pilot kayıtları dışlar, 2.000'e ulaşmadan durur ve iki statünün sayısını manifestte saklar. Validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini yalnız insan-kontrollü V1'in sabit 100 development + 500 final test bölümlerinde karşılaştırır; V2 uzantısını kullanmaz ve ardından bağımsız TabiBench retrieval koruma kontrolünü çalıştırır.
+- `notebooks/train_morph_encoder_train2000_colab.ipynb`: tam 2.000 `accepted`/`human_review` final family'yi (fazlası varsa slot sırasındaki ilk 2.000'i) %50 ters-yön örneklemesiyle E5-large üzerinde eğitir; 2.000 ileri + 1.000 ters olmak üzere toplam 3.000 eğitim örneği oluşturur. `reject` ve pilot kayıtları dışlar, 2.000'e ulaşmadan durur ve iki statünün sayısını manifestte saklar. Validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini yalnız insan-kontrollü V1'in sabit 100 development + 500 final test bölümlerinde karşılaştırır; V2 uzantısını kullanmaz ve ardından bağımsız TabiBench retrieval koruma kontrolünü çalıştırır.
 - `notebooks/train_morph_encoder_compare5_colab.ipynb`: beş encoder'ı aynı protokolle sırayla eğitir; önce development metriklerini, ardından beşinin de sealed-test metriklerini tek tabloda raporlar. Test sonucu hiperparametre seçimine geri beslenmez.
 
 - `production.py`: API, generator/judge promptları, kabul ve aday düzeltmesi.
