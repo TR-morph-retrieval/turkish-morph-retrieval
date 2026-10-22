@@ -1,7 +1,7 @@
 # Test V2 extension shards
 
-Bu klasör, insan-kontrollü 600-family V1 test setine eklenecek **200 family**
-uzantısını içerir (`codex_601_800.jsonl` aralıkları).
+Bu klasör, insan-kontrollü 600-family V1 test setine eklenecek **300 family**
+uzantısını içerir (`codex_601_900.jsonl` aralıkları).
 
 - Run: `extension_v40`
 - Generator: GPT-5.6 Sol, medium reasoning
@@ -10,6 +10,6 @@ uzantısını içerir (`codex_601_800.jsonl` aralıkları).
 - Durum: generator, deterministik kontroller, iki LLM judge ve policy gate geçmiş;
   final insan kontrolü henüz uygulanmamıştır.
 
-Tüm JSONL dosyaları birlikte 200 benzersiz `slot_id` içerir. DB'deki accepted
+Tüm JSONL dosyaları birlikte 300 benzersiz `slot_id` içerir. DB'deki accepted
 kümesiyle birebir eşleşir. İnsan kontrolü tamamlandıktan sonra V1 + V2 toplamı
-800 family olarak dondurulacaktır.
+900 family olarak dondurulacaktır.
