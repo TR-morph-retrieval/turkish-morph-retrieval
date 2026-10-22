@@ -465,7 +465,7 @@ release final insan kontrolü ve freeze sonrasında çıkar.
 | `morphology.py` | Opsiyonel Stanza audit'i |
 | `evaluation.py` | Metrikler, baseline, ablation ve istatistik |
 | `notebooks/morph_baseline_eval_300_colab.ipynb` | İlk 300 Codex family'sinin tamamını test olarak kullanan midpoint değerlendirmesi |
-| `notebooks/morph_baseline_eval_600_colab.ipynb` | 100 dev + 500 final paper değerlendirmesi |
+| `notebooks/morph_baseline_eval_600_colab.ipynb` | İnsan-kontrollü 600 family üzerinde 10 encoder baseline'ı: E5-large, BGE-M3, ModernBERT-TR, TR-MTEB-FT, Qwen3-Embedding-8B, Mursit-Base-TR, GTE-multilingual-base, Arctic-Embed-M-v2, Jina-v3 ve EmbeddingGemma-300M |
 
 Freeze çıktıları:
 

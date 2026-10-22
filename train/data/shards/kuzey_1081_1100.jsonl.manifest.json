@@ -1,0 +1,37 @@
+{
+  "manifest_version": 1,
+  "run_id": "train1250",
+  "producer": "kuzey",
+  "from": 1081,
+  "to": 1100,
+  "family_count": 20,
+  "shard_file": "kuzey_1081_1100.jsonl",
+  "slot_ids": [
+    "train_001081",
+    "train_001082",
+    "train_001083",
+    "train_001084",
+    "train_001085",
+    "train_001086",
+    "train_001087",
+    "train_001088",
+    "train_001089",
+    "train_001090",
+    "train_001091",
+    "train_001092",
+    "train_001093",
+    "train_001094",
+    "train_001095",
+    "train_001096",
+    "train_001097",
+    "train_001098",
+    "train_001099",
+    "train_001100"
+  ],
+  "shard_sha256": "efe11a415f3158376aaef24773da985d0ecf1563ae5f81c685f282516f8fe487",
+  "run_contract": {
+    "contract_sha256": "a2dbeeecc36fb26975554c0dd2092e25b2c26664138c3895de6747b35a88b1ef",
+    "config": "train-v26-drift-aware-review"
+  },
+  "run_contract_sha256": "b0e73c597e5eecb5edf6716a310f8c1577a6dd0471e4435549280f519cc6b7cb"
+}

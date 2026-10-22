@@ -275,7 +275,7 @@ judge için doğrulanacak iddiadır, ground truth kabul edilmez.
 ## Dosyalar / kayıt
 
 - `notebooks/train_morph_encoder_colab.ipynb`: tek seçilmiş encoder için kontrollü LoRA eğitimi ve development/final değerlendirme.
-- `notebooks/train_morph_encoder_train1250_colab.ipynb`: mevcut bütün final shard'larını %50 ters-yön örneklemesiyle E5-large üzerinde eğitir; validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini sabit 100 development + 500 final test üzerinde karşılaştırır ve ardından bağımsız TabiBench retrieval koruma kontrolünü çalıştırır.
+- `notebooks/train_morph_encoder_train1250_colab.ipynb`: tam 2.000 `accepted`/`human_review` final family'yi (fazlası varsa slot sırasındaki ilk 2.000'i) %50 ters-yön örneklemesiyle E5-large üzerinde eğitir; `reject` ve pilot kayıtları dışlar, 2.000'e ulaşmadan durur ve iki statünün sayısını manifestte saklar. Validation MRR@10 ile checkpoint seçip zero-shot/LoRA gelişimini yalnız insan-kontrollü V1'in sabit 100 development + 500 final test bölümlerinde karşılaştırır; V2 uzantısını kullanmaz ve ardından bağımsız TabiBench retrieval koruma kontrolünü çalıştırır.
 - `notebooks/train_morph_encoder_compare5_colab.ipynb`: beş encoder'ı aynı protokolle sırayla eğitir; önce development metriklerini, ardından beşinin de sealed-test metriklerini tek tabloda raporlar. Test sonucu hiperparametre seçimine geri beslenmez.
 
 - `production.py`: API, generator/judge promptları, kabul ve aday düzeltmesi.
