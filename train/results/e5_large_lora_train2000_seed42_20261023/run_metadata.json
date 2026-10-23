@@ -1,0 +1,42 @@
+{
+  "model": "intfloat/multilingual-e5-large",
+  "selected_key": "e5-large",
+  "seed": 42,
+  "train_families": 2000,
+  "train_pairs": 3000,
+  "reverse_train_families": 1000,
+  "development_families": 100,
+  "final_test_families": 500,
+  "evaluation_human_review_complete": true,
+  "v2_extension_included": false,
+  "best_epoch": 5.0,
+  "best_validation_mrr_at_10": 0.700040,
+  "training_runtime_seconds": 1084.9093,
+  "training_loss": 1.340212114821089,
+  "trainable_parameters": 14221312,
+  "all_parameters": 574111744,
+  "trainable_percent": 2.4771,
+  "params": {
+    "epochs": 5,
+    "early_stop_patience": 2,
+    "early_stop_min_delta": 0.001,
+    "batch_size": 32,
+    "cache_mini_batch": 16,
+    "learning_rate": 0.00001,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "lora_r": 32,
+    "lora_alpha": 64,
+    "lora_dropout": 0.05,
+    "max_seq_length": 256
+  },
+  "train_source_sha256": "04404581dab262b9f726e37d2d4637ecfdb60ef5e9941f545c8773b8f219518c",
+  "executed_notebook_sha256": "741ff50f771ebf036f1a148b302f346d4ddb6c7f72588a4b7d674dac9ce50819",
+  "malformed_source_slots_excluded": [
+    "train_001410",
+    "train_001412"
+  ],
+  "included_results": "MorphTR validation_100 and final_test_500 only",
+  "tabibench_included": false
+}
+

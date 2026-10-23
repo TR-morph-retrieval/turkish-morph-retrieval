@@ -1,0 +1,6 @@
+stage,mrr@10,ndcg@10,recall@1,recall@3,mean_rank,median_rank,hard_only_mrr@10,hard_only_ndcg@10,pairwise_hard_accuracy,pairwise_morph_hard_accuracy,pairwise_semantic_hard_accuracy,morph_hard_family_consistency,semantic_hard_family_consistency,all_hard_family_consistency,contrast_consistency,minimal_margin,hardest_hard_margin,hardest_negative_margin,mean_hard_rank
+zero-shot / validation_100,0.652123,0.737652,0.470,0.790,2.280,2.0,0.652123,0.737652,0.84000,0.799500,0.888833,0.540,0.690,0.470,0.833333,0.005984,-0.001164,-0.001164,2.280
+best LoRA / validation_100,0.700040,0.773669,0.550,0.840,2.110,1.0,0.700040,0.773669,0.86125,0.840667,0.886667,0.600,0.720,0.550,0.800000,0.049834,-0.002478,-0.002478,2.110
+zero-shot / final_test_500,0.641316,0.730071,0.440,0.814,2.246,2.0,0.641316,0.730071,0.84425,0.809533,0.885367,0.518,0.682,0.440,0.691667,0.004439,-0.001598,-0.001598,2.246
+best LoRA / final_test_500,0.677847,0.758545,0.474,0.888,2.010,2.0,0.677947,0.758632,0.87400,0.852867,0.896833,0.594,0.720,0.474,0.766667,0.049077,-0.005434,-0.005434,2.008
+
