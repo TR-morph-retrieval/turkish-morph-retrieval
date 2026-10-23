@@ -8,8 +8,8 @@ edilmemiştir.
 
 - Train: 2.000 family (`accepted` ve `human_review` dahil)
 - Augmentation: 2.000 ileri + deterministik 1.000 ters yön = 3.000 örnek
-- Development: insan-kontrollü V1'den feature-dengeli 100 family
-- Final test: insan-kontrollü V1'in kalan 500 family'si
+- Development: insan review öncesi `test/data/final_shards` kaynağından feature-dengeli 100 family
+- Final test: aynı pre-review kaynağın kalan 500 family'si
 - Model: `intfloat/multilingual-e5-large`
 - Seed: 42
 - Epoch: 5; en iyi epoch: 5
@@ -37,6 +37,12 @@ edilmemiştir.
 Final testte bütün temel sıralama metrikleri yükselmiştir. Özellikle Recall@3'teki
 7,4 puanlık ve morfolojik hard pairwise doğruluktaki 4,33 puanlık artış, eğitimin
 morfolojik karşıtlıkları ilk sıralarda ayırt etmeyi iyileştirdiğini gösterir.
+
+> **Provenance düzeltmesi:** Bu koşunun skorları insan-kontrollü birleşik JSON'dan
+> değil, review öncesi `test/data/final_shards` metinlerinden hesaplanmıştır. Bu
+> nedenle burada yalnız Base→LoRA farkı eski koşunun kendi içinde yorumlanmalıdır.
+> İnsan-kontrollü nihai skorlar, güncellenen notebook yeniden çalıştırıldığında
+> ayrıca kaydedilecektir.
 
 Dosyalar:
 
