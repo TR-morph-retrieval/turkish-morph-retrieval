@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "train1250",
-  "size": 2250,
+  "size": 2500,
   "chunk_size": 20,
-  "contract_sha256": "a2dbeeecc36fb26975554c0dd2092e25b2c26664138c3895de6747b35a88b1ef",
+  "contract_sha256": "20429c7fa8ae37322b01c3c4cdad138b38ecde4377766e19a4f259a170ee2481",
   "producers": [
     "arda",
     "burak",
@@ -45,7 +45,7 @@
     {
       "producer": "arda",
       "from": 2001,
-      "to": 2250
+      "to": 2500
     }
   ],
   "allocations": [
@@ -627,7 +627,67 @@
     {
       "producer": "arda",
       "from": 2241,
-      "to": 2250
+      "to": 2260
+    },
+    {
+      "producer": "arda",
+      "from": 2261,
+      "to": 2280
+    },
+    {
+      "producer": "arda",
+      "from": 2281,
+      "to": 2300
+    },
+    {
+      "producer": "arda",
+      "from": 2301,
+      "to": 2320
+    },
+    {
+      "producer": "arda",
+      "from": 2321,
+      "to": 2340
+    },
+    {
+      "producer": "arda",
+      "from": 2341,
+      "to": 2360
+    },
+    {
+      "producer": "arda",
+      "from": 2361,
+      "to": 2380
+    },
+    {
+      "producer": "arda",
+      "from": 2381,
+      "to": 2400
+    },
+    {
+      "producer": "arda",
+      "from": 2401,
+      "to": 2420
+    },
+    {
+      "producer": "arda",
+      "from": 2421,
+      "to": 2440
+    },
+    {
+      "producer": "arda",
+      "from": 2441,
+      "to": 2460
+    },
+    {
+      "producer": "arda",
+      "from": 2461,
+      "to": 2480
+    },
+    {
+      "producer": "arda",
+      "from": 2481,
+      "to": 2500
     }
   ]
 }

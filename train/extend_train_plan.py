@@ -24,10 +24,10 @@ OWNER_RANGES = [
     ("emir", 1251, 1500),
     ("murat", 1501, 1750),
     ("burak", 1751, 2000),
-    ("arda", 2001, 2250),
+    ("arda", 2001, 2500),
 ]
 
-MILESTONES = (1750, 2000, 2250)
+MILESTONES = (1750, 2000, 2250, 2500)
 
 
 def chunked_allocations(chunk_size: int = 20):
@@ -66,11 +66,11 @@ def migrate_existing_shard_contracts(folder: Path, shard_dir: Path, manifest: di
     return migrated
 
 
-def extend(folder: Path, shard_dir: Path, target_size: int = 2250, seed: int = 42):
+def extend(folder: Path, shard_dir: Path, target_size: int = 2500, seed: int = 42):
     manifest, protected, plan = verify(folder)
     original_size = len(plan)
     if original_size not in {1250, *MILESTONES}:
-        raise ValueError(f"Beklenen plan boyutu 1250/1750/2000/2250; bulunan {original_size}")
+        raise ValueError(f"Beklenen plan boyutu 1250/1750/2000/2250/2500; bulunan {original_size}")
 
     for milestone in MILESTONES:
         if len(plan) >= milestone or milestone > target_size:

@@ -107,15 +107,15 @@ python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --output train/archive/pilot/data/pilot45.jsonl
 
 # Nihai ortak plan: ilk dağılıma Burak ve Arda için 250'şer ek family eklenir = 2.250 family.
-# İlk 2.000 slot ve mevcut kabul kayıtları korunur; yalnız 2.001–2.250 eklenir.
+# İlk 2.250 slot ve mevcut kabul kayıtları korunur; yalnız 2.251–2.500 eklenir.
 python3 train/workflow.py prepare --run-id train1250 \
   --source test/data/final_shards --size 1250 --seed 42
 
-# Koordinatör canlı run'i güvenli biçimde 2.250'ye uzatır ve 20'lik
+# Koordinatör canlı run'i güvenli biçimde 2.500'e uzatır ve 20'lik
 # push parçalarına ait assignments.json'u oluşturur:
 # arda 1–750, burak 751–1000, kuzey 1001–1250,
 # emir 1251–1500, murat 1501–1750, burak ek olarak 1751–2000,
-# arda ek olarak 2001–2250.
+# arda ek olarak 2001–2500.
 python3 train/extend_train_plan.py --run-id train1250 \
   --shard-dir train/data/shards
 

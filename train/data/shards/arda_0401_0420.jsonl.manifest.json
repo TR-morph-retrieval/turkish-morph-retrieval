@@ -30,8 +30,8 @@
   ],
   "shard_sha256": "199738bbea0edf4c6a28635578cc374d88d2893cb1ae841e2b50b02e520c80e1",
   "run_contract": {
-    "contract_sha256": "a2dbeeecc36fb26975554c0dd2092e25b2c26664138c3895de6747b35a88b1ef",
+    "contract_sha256": "20429c7fa8ae37322b01c3c4cdad138b38ecde4377766e19a4f259a170ee2481",
     "config": "train-v26-drift-aware-review"
   },
-  "run_contract_sha256": "b0e73c597e5eecb5edf6716a310f8c1577a6dd0471e4435549280f519cc6b7cb"
+  "run_contract_sha256": "54558f70968c364d4c31770a9b2a6a69c5724a44ff31fd3d9655c1683271685a"
 }
