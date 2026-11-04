@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "train1250",
-  "size": 2500,
+  "size": 3000,
   "chunk_size": 20,
-  "contract_sha256": "20429c7fa8ae37322b01c3c4cdad138b38ecde4377766e19a4f259a170ee2481",
+  "contract_sha256": "6c6d97664852b61dbcdda6209f4e324fb51cc1675ba8fcd151916f42764a2f80",
   "producers": [
     "arda",
     "burak",
@@ -45,7 +45,7 @@
     {
       "producer": "arda",
       "from": 2001,
-      "to": 2500
+      "to": 3000
     }
   ],
   "allocations": [
@@ -688,6 +688,131 @@
       "producer": "arda",
       "from": 2481,
       "to": 2500
+    },
+    {
+      "producer": "arda",
+      "from": 2501,
+      "to": 2520
+    },
+    {
+      "producer": "arda",
+      "from": 2521,
+      "to": 2540
+    },
+    {
+      "producer": "arda",
+      "from": 2541,
+      "to": 2560
+    },
+    {
+      "producer": "arda",
+      "from": 2561,
+      "to": 2580
+    },
+    {
+      "producer": "arda",
+      "from": 2581,
+      "to": 2600
+    },
+    {
+      "producer": "arda",
+      "from": 2601,
+      "to": 2620
+    },
+    {
+      "producer": "arda",
+      "from": 2621,
+      "to": 2640
+    },
+    {
+      "producer": "arda",
+      "from": 2641,
+      "to": 2660
+    },
+    {
+      "producer": "arda",
+      "from": 2661,
+      "to": 2680
+    },
+    {
+      "producer": "arda",
+      "from": 2681,
+      "to": 2700
+    },
+    {
+      "producer": "arda",
+      "from": 2701,
+      "to": 2720
+    },
+    {
+      "producer": "arda",
+      "from": 2721,
+      "to": 2740
+    },
+    {
+      "producer": "arda",
+      "from": 2741,
+      "to": 2760
+    },
+    {
+      "producer": "arda",
+      "from": 2761,
+      "to": 2780
+    },
+    {
+      "producer": "arda",
+      "from": 2781,
+      "to": 2800
+    },
+    {
+      "producer": "arda",
+      "from": 2801,
+      "to": 2820
+    },
+    {
+      "producer": "arda",
+      "from": 2821,
+      "to": 2840
+    },
+    {
+      "producer": "arda",
+      "from": 2841,
+      "to": 2860
+    },
+    {
+      "producer": "arda",
+      "from": 2861,
+      "to": 2880
+    },
+    {
+      "producer": "arda",
+      "from": 2881,
+      "to": 2900
+    },
+    {
+      "producer": "arda",
+      "from": 2901,
+      "to": 2920
+    },
+    {
+      "producer": "arda",
+      "from": 2921,
+      "to": 2940
+    },
+    {
+      "producer": "arda",
+      "from": 2941,
+      "to": 2960
+    },
+    {
+      "producer": "arda",
+      "from": 2961,
+      "to": 2980
+    },
+    {
+      "producer": "arda",
+      "from": 2981,
+      "to": 3000
     }
   ]
 }
