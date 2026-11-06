@@ -1,5 +1,8 @@
 # Train üretimi: Gemini 3.8 Flash + iki bağımsız judge
 
+Nihai 5K veri hedefi, 1K/2.5K/5K scaling curve ve simetri ablation planı:
+[`docs/experiment_plan_5000.md`](docs/experiment_plan_5000.md).
+
 Generator Gemini 3.8 Flash düşük reasoning ile çalışır; semantik judge GPT-5.6 Luna,
 morfoloji judge'ı GLM 5.3 Flash düşük reasoning kullanır. Train generator'ı,
 test üreticisinden farklı bir model ailesidir. Gemini için Flex tavanı $0.375/M girdi
