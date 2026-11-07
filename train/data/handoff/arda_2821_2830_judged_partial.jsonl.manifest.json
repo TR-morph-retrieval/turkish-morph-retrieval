@@ -1,0 +1,18 @@
+{
+  "kind": "partial_handoff_not_final_shard",
+  "producer": "arda",
+  "recipient": "burak",
+  "source_range": [
+    2821,
+    2830
+  ],
+  "family_count": 5,
+  "slot_ids": [
+    "train_002821",
+    "train_002822",
+    "train_002826",
+    "train_002828",
+    "train_002830"
+  ],
+  "sha256": "e08e43a4c0db91bbdb23b262061b48f3a7d0be5046f1326fcdf8a984485f2003"
+}
