@@ -1,7 +1,9 @@
 # Train üretim devri
 
-Arda'nın Gemini/Antigravity üretimi 2.820 numaralı slotta sona erdi. Üretim
-sahipliği 2.821–3.000 aralığında Burak'a devredildi.
+Arda'nın Gemini/Antigravity üretimi 2.820 numaralı slotta sona erdi. 5K hedefi
+için üretim sahipliği 2.821–5.000 aralığında Burak'a devredildi. Mevcut run
+sözleşmesi 3.000 slotla sınırlı olduğundan 3.001–5.000 atamaları run planı
+genişletildiğinde resmîleştirilecektir.
 
 `arda_2821_2830_judged_partial.jsonl`, Arda'nın daha önce Gemini ile oluşturduğu
 2.821–2.830 taslaklarından iki bağımsız LLM judge ve policy gate'i geçen kayıtları
