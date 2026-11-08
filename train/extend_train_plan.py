@@ -24,10 +24,11 @@ OWNER_RANGES = [
     ("emir", 1251, 1500),
     ("murat", 1501, 1750),
     ("burak", 1751, 2000),
-    ("arda", 2001, 3000),
+    ("arda", 2001, 2820),
+    ("burak", 2821, 5000),
 ]
 
-MILESTONES = (1750, 2000, 2250, 2500, 2750, 3000)
+MILESTONES = (1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000, 4250, 4500, 4750, 5000)
 
 
 def chunked_allocations(chunk_size: int = 20):
@@ -66,7 +67,7 @@ def migrate_existing_shard_contracts(folder: Path, shard_dir: Path, manifest: di
     return migrated
 
 
-def extend(folder: Path, shard_dir: Path, target_size: int = 3000, seed: int = 42):
+def extend(folder: Path, shard_dir: Path, target_size: int = 5000, seed: int = 42):
     manifest, protected, plan = verify(folder)
     original_size = len(plan)
     if original_size not in {1250, *MILESTONES}:
@@ -137,10 +138,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id", default="train1250")
     parser.add_argument("--shard-dir", type=Path, default=HERE / "data" / "shards")
+    parser.add_argument("--target-size", type=int, default=5000)
     args = parser.parse_args()
     folder = HERE / "runs" / args.run_id
     with run_lock(folder):
-        result = extend(folder, args.shard_dir)
+        result = extend(folder, args.shard_dir, target_size=args.target_size)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

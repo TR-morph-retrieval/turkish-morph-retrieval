@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "train1250",
-  "size": 3000,
+  "size": 5000,
   "chunk_size": 20,
-  "contract_sha256": "6c6d97664852b61dbcdda6209f4e324fb51cc1675ba8fcd151916f42764a2f80",
+  "contract_sha256": "20b4c81826831fd1a0c5a4e1ac675ed5f4063b1b2ab68225e21a8f9b3c5b3854",
   "producers": [
     "arda",
     "burak",
@@ -45,7 +45,12 @@
     {
       "producer": "arda",
       "from": 2001,
-      "to": 3000
+      "to": 2820
+    },
+    {
+      "producer": "burak",
+      "from": 2821,
+      "to": 5000
     }
   ],
   "allocations": [
@@ -813,6 +818,506 @@
       "producer": "burak",
       "from": 2981,
       "to": 3000
+    },
+    {
+      "producer": "burak",
+      "from": 3001,
+      "to": 3020
+    },
+    {
+      "producer": "burak",
+      "from": 3021,
+      "to": 3040
+    },
+    {
+      "producer": "burak",
+      "from": 3041,
+      "to": 3060
+    },
+    {
+      "producer": "burak",
+      "from": 3061,
+      "to": 3080
+    },
+    {
+      "producer": "burak",
+      "from": 3081,
+      "to": 3100
+    },
+    {
+      "producer": "burak",
+      "from": 3101,
+      "to": 3120
+    },
+    {
+      "producer": "burak",
+      "from": 3121,
+      "to": 3140
+    },
+    {
+      "producer": "burak",
+      "from": 3141,
+      "to": 3160
+    },
+    {
+      "producer": "burak",
+      "from": 3161,
+      "to": 3180
+    },
+    {
+      "producer": "burak",
+      "from": 3181,
+      "to": 3200
+    },
+    {
+      "producer": "burak",
+      "from": 3201,
+      "to": 3220
+    },
+    {
+      "producer": "burak",
+      "from": 3221,
+      "to": 3240
+    },
+    {
+      "producer": "burak",
+      "from": 3241,
+      "to": 3260
+    },
+    {
+      "producer": "burak",
+      "from": 3261,
+      "to": 3280
+    },
+    {
+      "producer": "burak",
+      "from": 3281,
+      "to": 3300
+    },
+    {
+      "producer": "burak",
+      "from": 3301,
+      "to": 3320
+    },
+    {
+      "producer": "burak",
+      "from": 3321,
+      "to": 3340
+    },
+    {
+      "producer": "burak",
+      "from": 3341,
+      "to": 3360
+    },
+    {
+      "producer": "burak",
+      "from": 3361,
+      "to": 3380
+    },
+    {
+      "producer": "burak",
+      "from": 3381,
+      "to": 3400
+    },
+    {
+      "producer": "burak",
+      "from": 3401,
+      "to": 3420
+    },
+    {
+      "producer": "burak",
+      "from": 3421,
+      "to": 3440
+    },
+    {
+      "producer": "burak",
+      "from": 3441,
+      "to": 3460
+    },
+    {
+      "producer": "burak",
+      "from": 3461,
+      "to": 3480
+    },
+    {
+      "producer": "burak",
+      "from": 3481,
+      "to": 3500
+    },
+    {
+      "producer": "burak",
+      "from": 3501,
+      "to": 3520
+    },
+    {
+      "producer": "burak",
+      "from": 3521,
+      "to": 3540
+    },
+    {
+      "producer": "burak",
+      "from": 3541,
+      "to": 3560
+    },
+    {
+      "producer": "burak",
+      "from": 3561,
+      "to": 3580
+    },
+    {
+      "producer": "burak",
+      "from": 3581,
+      "to": 3600
+    },
+    {
+      "producer": "burak",
+      "from": 3601,
+      "to": 3620
+    },
+    {
+      "producer": "burak",
+      "from": 3621,
+      "to": 3640
+    },
+    {
+      "producer": "burak",
+      "from": 3641,
+      "to": 3660
+    },
+    {
+      "producer": "burak",
+      "from": 3661,
+      "to": 3680
+    },
+    {
+      "producer": "burak",
+      "from": 3681,
+      "to": 3700
+    },
+    {
+      "producer": "burak",
+      "from": 3701,
+      "to": 3720
+    },
+    {
+      "producer": "burak",
+      "from": 3721,
+      "to": 3740
+    },
+    {
+      "producer": "burak",
+      "from": 3741,
+      "to": 3760
+    },
+    {
+      "producer": "burak",
+      "from": 3761,
+      "to": 3780
+    },
+    {
+      "producer": "burak",
+      "from": 3781,
+      "to": 3800
+    },
+    {
+      "producer": "burak",
+      "from": 3801,
+      "to": 3820
+    },
+    {
+      "producer": "burak",
+      "from": 3821,
+      "to": 3840
+    },
+    {
+      "producer": "burak",
+      "from": 3841,
+      "to": 3860
+    },
+    {
+      "producer": "burak",
+      "from": 3861,
+      "to": 3880
+    },
+    {
+      "producer": "burak",
+      "from": 3881,
+      "to": 3900
+    },
+    {
+      "producer": "burak",
+      "from": 3901,
+      "to": 3920
+    },
+    {
+      "producer": "burak",
+      "from": 3921,
+      "to": 3940
+    },
+    {
+      "producer": "burak",
+      "from": 3941,
+      "to": 3960
+    },
+    {
+      "producer": "burak",
+      "from": 3961,
+      "to": 3980
+    },
+    {
+      "producer": "burak",
+      "from": 3981,
+      "to": 4000
+    },
+    {
+      "producer": "burak",
+      "from": 4001,
+      "to": 4020
+    },
+    {
+      "producer": "burak",
+      "from": 4021,
+      "to": 4040
+    },
+    {
+      "producer": "burak",
+      "from": 4041,
+      "to": 4060
+    },
+    {
+      "producer": "burak",
+      "from": 4061,
+      "to": 4080
+    },
+    {
+      "producer": "burak",
+      "from": 4081,
+      "to": 4100
+    },
+    {
+      "producer": "burak",
+      "from": 4101,
+      "to": 4120
+    },
+    {
+      "producer": "burak",
+      "from": 4121,
+      "to": 4140
+    },
+    {
+      "producer": "burak",
+      "from": 4141,
+      "to": 4160
+    },
+    {
+      "producer": "burak",
+      "from": 4161,
+      "to": 4180
+    },
+    {
+      "producer": "burak",
+      "from": 4181,
+      "to": 4200
+    },
+    {
+      "producer": "burak",
+      "from": 4201,
+      "to": 4220
+    },
+    {
+      "producer": "burak",
+      "from": 4221,
+      "to": 4240
+    },
+    {
+      "producer": "burak",
+      "from": 4241,
+      "to": 4260
+    },
+    {
+      "producer": "burak",
+      "from": 4261,
+      "to": 4280
+    },
+    {
+      "producer": "burak",
+      "from": 4281,
+      "to": 4300
+    },
+    {
+      "producer": "burak",
+      "from": 4301,
+      "to": 4320
+    },
+    {
+      "producer": "burak",
+      "from": 4321,
+      "to": 4340
+    },
+    {
+      "producer": "burak",
+      "from": 4341,
+      "to": 4360
+    },
+    {
+      "producer": "burak",
+      "from": 4361,
+      "to": 4380
+    },
+    {
+      "producer": "burak",
+      "from": 4381,
+      "to": 4400
+    },
+    {
+      "producer": "burak",
+      "from": 4401,
+      "to": 4420
+    },
+    {
+      "producer": "burak",
+      "from": 4421,
+      "to": 4440
+    },
+    {
+      "producer": "burak",
+      "from": 4441,
+      "to": 4460
+    },
+    {
+      "producer": "burak",
+      "from": 4461,
+      "to": 4480
+    },
+    {
+      "producer": "burak",
+      "from": 4481,
+      "to": 4500
+    },
+    {
+      "producer": "burak",
+      "from": 4501,
+      "to": 4520
+    },
+    {
+      "producer": "burak",
+      "from": 4521,
+      "to": 4540
+    },
+    {
+      "producer": "burak",
+      "from": 4541,
+      "to": 4560
+    },
+    {
+      "producer": "burak",
+      "from": 4561,
+      "to": 4580
+    },
+    {
+      "producer": "burak",
+      "from": 4581,
+      "to": 4600
+    },
+    {
+      "producer": "burak",
+      "from": 4601,
+      "to": 4620
+    },
+    {
+      "producer": "burak",
+      "from": 4621,
+      "to": 4640
+    },
+    {
+      "producer": "burak",
+      "from": 4641,
+      "to": 4660
+    },
+    {
+      "producer": "burak",
+      "from": 4661,
+      "to": 4680
+    },
+    {
+      "producer": "burak",
+      "from": 4681,
+      "to": 4700
+    },
+    {
+      "producer": "burak",
+      "from": 4701,
+      "to": 4720
+    },
+    {
+      "producer": "burak",
+      "from": 4721,
+      "to": 4740
+    },
+    {
+      "producer": "burak",
+      "from": 4741,
+      "to": 4760
+    },
+    {
+      "producer": "burak",
+      "from": 4761,
+      "to": 4780
+    },
+    {
+      "producer": "burak",
+      "from": 4781,
+      "to": 4800
+    },
+    {
+      "producer": "burak",
+      "from": 4801,
+      "to": 4820
+    },
+    {
+      "producer": "burak",
+      "from": 4821,
+      "to": 4840
+    },
+    {
+      "producer": "burak",
+      "from": 4841,
+      "to": 4860
+    },
+    {
+      "producer": "burak",
+      "from": 4861,
+      "to": 4880
+    },
+    {
+      "producer": "burak",
+      "from": 4881,
+      "to": 4900
+    },
+    {
+      "producer": "burak",
+      "from": 4901,
+      "to": 4920
+    },
+    {
+      "producer": "burak",
+      "from": 4921,
+      "to": 4940
+    },
+    {
+      "producer": "burak",
+      "from": 4941,
+      "to": 4960
+    },
+    {
+      "producer": "burak",
+      "from": 4961,
+      "to": 4980
+    },
+    {
+      "producer": "burak",
+      "from": 4981,
+      "to": 5000
     }
   ]
 }
