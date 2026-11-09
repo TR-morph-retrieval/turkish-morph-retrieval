@@ -109,16 +109,13 @@ python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --existing train/archive/pilot/data/pilot40.jsonl \
   --output train/archive/pilot/data/pilot45.jsonl
 
-# Nihai ortak plan: ilk dağılıma Burak ve Arda için 250'şer ek family eklenir = 2.250 family.
-# İlk 2.500 slot ve mevcut kabul kayıtları korunur; yalnız 2.501–3.000 eklenir.
+# Nihai ortak plan 5.000 slottur. Geçmiş üreticilerin gerçek kaynak bilgisi
+# shard manifestlerinde korunur; yeni 2.821–4.500 Burak, 4.501–5.000 Murat.
 python3 train/workflow.py prepare --run-id train1250 \
   --source test/data/final_shards --size 1250 --seed 42
 
-# Koordinatör canlı run'i güvenli biçimde 3.000'e uzatır ve 20'lik
-# push parçalarına ait assignments.json'u oluşturur:
-# arda 1–750, burak 751–1000, kuzey 1001–1250,
-# emir 1251–1500, murat 1501–1750, burak ek olarak 1751–2000,
-# arda ek olarak 2001–3000.
+# Koordinatör canlı run'i 5.000'e uzatır ve 20'lik push parçalarına ait
+# assignments.json'u oluşturur. Mevcut 5K run'da bu adım tekrar çalıştırılmaz.
 python3 train/extend_train_plan.py --run-id train1250 \
   --shard-dir train/data/shards
 
