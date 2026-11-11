@@ -57,19 +57,19 @@ shard'dan çıkarıldı. Önceki sürümler Git geçmişindeki `5af02d9` commit'
 aralıkları doğrulanarak `codex_774_794.jsonl` → `codex_775_795.jsonl`, kalan
 `codex_795_800.jsonl` → `codex_797_800.jsonl` olarak yeniden adlandırıldı.
 
-Şimdi Codex tarafında **298 satır / 298 benzersiz slot** var. Eksik iki slot
-Codex genel sıra 774 (`raw_00947`) ve 796 (`raw_00991`). Bunlar üretilmeden
-Codex 300 tamamlandı denmez. Diğer erken dönem Codex dosyalarının bazı adları
+Codex genel sıra 774 (`raw_00947`) ve 796 (`raw_00991`) aynı `extension_v40`
+GPT-5.6 Sol üretim/hakem hattında tamamlanıp tekli shard'lar olarak eklendi.
+Codex tarafında artık **300 satır / 300 benzersiz slot** var. Diğer erken dönem Codex dosyalarının bazı adları
 (642–658) içerik sırasıyla birebir eşleşmese de slot ID'leri tekildir;
 `shared-sync` gerçek plan/slot ID üzerinden doğrulama yapar.
 
-Opus 5.5 run'ında `shared-sync` 298 Codex + 90 Claude = 388 kayıtla geçmiştir.
-Kalan 212 slot: 2 Codex + 210 Claude. Bu, son üretimin tamamlandığı anlamına
+Opus 5.5 run'ında `shared-sync` 300 Codex + 90 Claude = 390 kayıtla geçmiştir.
+Kalan 210 slotun tamamı Claude tarafındadır. Bu, son üretimin tamamlandığı anlamına
 gelmez; insan kontrolü ayrıca yapılacaktır.
 
 ## Claude üretimine hazırlık
 
-Codex çakışması giderildi; eksik iki slot görünür kalacak şekilde her makinede
+Codex çakışması ve eksik iki slot giderildi; her makinede
 aynı config ve run ID kullanılır:
 
 ```bash
