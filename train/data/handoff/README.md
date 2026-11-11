@@ -1,7 +1,8 @@
 # Train üretim devri
 
-İlk 2.820 slotun tamamlanmış shardlarında farklı üreticiler yer alır. 5K
-planında 2.821–4.500 aralığı Burak'a, 4.501–5.000 aralığı Murat'a atanmıştır.
+İlk 2.820 slotun tamamlanmış shardlarında farklı üreticiler yer alır. Burak,
+kaldığımız yer olan 2.821'den 5.000'e kadar kalan tüm üretimden sorumludur.
+Eski shard'ların üretici bilgileri ve tarihsel atamaları korunur.
 
 `arda_2821_2830_judged_partial.jsonl`, Arda'nın daha önce Gemini ile oluşturduğu
 2.821–2.830 taslaklarından iki bağımsız LLM judge ve policy gate'i geçen kayıtları

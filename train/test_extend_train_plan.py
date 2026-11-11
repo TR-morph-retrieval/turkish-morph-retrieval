@@ -9,6 +9,12 @@ class ExtendTrainPlanTests(unittest.TestCase):
         actual = [i for item in allocations for i in range(item['from'], item['to'] + 1)]
         self.assertEqual(actual, list(range(1, 5001)))
         self.assertEqual(len(actual), len(set(actual)))
+        future_burak = [item for item in allocations
+                        if item['producer'] == 'burak' and item['from'] >= 2821]
+        self.assertEqual(future_burak[0]['from'], 2821)
+        self.assertEqual(future_burak[-1]['to'], 5000)
+        self.assertFalse(any(item['producer'] == 'murat' and item['from'] >= 2821
+                             for item in allocations))
         for producer, start, end in OWNER_RANGES:
             owned = [item for item in allocations
                      if item['producer'] == producer

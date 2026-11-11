@@ -25,8 +25,9 @@ OWNER_RANGES = [
     ("murat", 1501, 1750),
     ("burak", 1751, 2000),
     ("arda", 2001, 2820),
-    ("burak", 2821, 4500),
-    ("murat", 4501, 5000),
+    # Forward handoff: Burak owns all remaining production after the accepted
+    # historical prefix, including the range previously reserved for Murat.
+    ("burak", 2821, 5000),
 ]
 
 MILESTONES = (1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000, 4250, 4500, 4750, 5000)
@@ -61,10 +62,12 @@ def migrate_existing_shard_contracts(folder: Path, shard_dir: Path, manifest: di
         expected_ids = [spec["slot_id"] for spec in plan[start - 1:end]]
         if metadata.get("slot_ids") != expected_ids or len(read_jsonl(shard)) != end - start + 1:
             raise ValueError(f"Shard genişletilen planın değişmeyen önekiyle uyuşmuyor: {shard}")
-        metadata["run_contract"] = contract_value
-        metadata["run_contract_sha256"] = json_sha(contract_value)
-        write_json(sidecar, metadata)
-        migrated += 1
+        if (metadata.get("run_contract") != contract_value
+                or metadata.get("run_contract_sha256") != json_sha(contract_value)):
+            metadata["run_contract"] = contract_value
+            metadata["run_contract_sha256"] = json_sha(contract_value)
+            write_json(sidecar, metadata)
+            migrated += 1
     return migrated
 
 

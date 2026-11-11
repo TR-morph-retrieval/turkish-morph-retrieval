@@ -3,8 +3,8 @@
 ## Sabit hedef
 
 - Final train havuzu: **5.000 temiz ve benzersiz family**
-- `train_002821`–`train_004500` üretim sorumlusu: **Burak**
-- `train_004501`–`train_005000` üretim sorumlusu: **Murat**
+- Tarihsel 1–2.820 üretimleri mevcut shard manifestlerindeki üreticilerle korunur.
+- Kalan `train_002821`–`train_005000` üretim sorumlusu: **Burak**
 - Final değerlendirme havuzu: **1.200 insan-kontrollü family**
   - Development: 200 family
   - Sealed test: 1.000 family

@@ -110,7 +110,7 @@ python3 train/pilot_report.py merge --runs pilot5_train_v19 \
   --output train/archive/pilot/data/pilot45.jsonl
 
 # Nihai ortak plan 5.000 slottur. Geçmiş üreticilerin gerçek kaynak bilgisi
-# shard manifestlerinde korunur; yeni 2.821–4.500 Burak, 4.501–5.000 Murat.
+# shard manifestlerinde korunur; kalan 2.821–5.000 aralığının tamamı Burak'a atanır.
 python3 train/workflow.py prepare --run-id train1250 \
   --source test/data/final_shards --size 1250 --seed 42
 
