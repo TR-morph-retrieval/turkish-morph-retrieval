@@ -12,6 +12,11 @@ Dosya numaraları V1'in ardından devam eden **genel family sırasıdır**; V2 p
 - Codex: **601–900** (300 family), shard adları `codex_601_615.jsonl` biçiminde.
 - Claude: **901–1200** (300 family), shard adları `claude_901_915.jsonl` biçiminde.
 
+Önceden 616–705 olarak adlandırılmış altı Claude shard'ı, içerikleri değiştirilmeden
+916–1005 adlarına taşındı. Bu 90 satırın tamamı plandaki Claude slot sırasıyla
+eşleşiyor ve provenance'da istenen/gerçek model `claude-opus-5-5` görünüyor.
+İlk 901–915 aralığı henüz bu depoda yok; ayrıca tamamlanmalıdır.
+
 Claude için V2'de yeni numaralandırma 1'den başlamaz. Üretim planında `generator_a`
 Codex'e, `generator_b` Claude'a karşılık gelir; her biri aynı 600-slotluk plandaki
 300 kendi slotunu alır. Genel numara yalnız paylaşılabilir dosya adında kullanılır.
@@ -65,7 +70,10 @@ python3 -m test --config test/config_v2_extension_opus55.json generate --run-id 
 python3 -m test --config test/config_v2_extension_opus55.json shard-export --run-id extension_v41_opus55 --generator-id generator_b --offset 0 --limit 15 --output test/data/v2_extension_shards/claude_901_915.jsonl
 ```
 
-Sonraki 15'lik batch için `--offset 15`, `--output claude_916_930.jsonl` kullanılır.
-Her batch'ten önce güncel shard'lar pull/sync edilir. `range-run` komutu eski V1
+Her batch'te Claude sıra başlangıcı `N` ise `--offset N-901` ve çıktı adı
+`claude_N_(N+14).jsonl` olur. Mevcut 916–1005 shard'ları yeniden üretilmez.
+İlk eksik 901–915 tamamlandıktan sonraki boş aralık 1006–1020'dir
+(`--offset 105`). Her batch'ten önce güncel shard'lar pull/sync edilir.
+`range-run` komutu eski V1
 `final_shards` sözleşmesine bağlıdır; bu V2 uzantısı için yukarıdaki açık
 `generate` + `shard-export` akışı kullanılır.
