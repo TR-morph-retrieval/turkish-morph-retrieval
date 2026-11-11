@@ -47,20 +47,30 @@ senkronlanmalı, ardından Claude kolu üretilmelidir. Eski shard'ların provena
 değiştirilmez; yeni Claude kayıtlarının gerçek model kimliği provenance'da
 `claude-opus-5-5` olarak doğrulanmalıdır.
 
-## Senkronizasyon öncesi veri uyarısı
+## Codex çakışma çözümü ve kalan eksikler
 
-Codex shard'larının mevcut kopyasında 300 satır var ama yalnızca **298 benzersiz
-slot ID** bulunuyor: `raw_01001` ve `raw_01003` hem `codex_795_800.jsonl` hem
-`codex_801_900.jsonl` içinde, farklı içerikle yer alıyor; `raw_00947` ve
-`raw_00991` ise yok. Bu kayıtları sessizce atlayıp üretimi 300 tamamlanmış gibi
-raporlamayın. Önce doğru sürümler belirlenip shard kapsamı düzeltilmeli; sonra
-shared-sync ve benzersizlik kontrolleri yeniden çalıştırılmalı. Mevcut shard'lar
-bu notla değiştirilmiş sayılmaz.
+`raw_01001` ve `raw_01003` için plandaki doğru Codex sırası 801–802'dir;
+`codex_801_900.jsonl` içindeki iki kayıt korundu. Yanlışlıkla eski
+`codex_795_800.jsonl` dosyasına eklenmiş farklı metinli kopyalar aktif
+shard'dan çıkarıldı. Önceki sürümler Git geçmişindeki `5af02d9` commit'inin
+`codex_795_800.jsonl` dosyasında (5–6. satırlar) geri alınabilir. İçerik
+aralıkları doğrulanarak `codex_774_794.jsonl` → `codex_775_795.jsonl`, kalan
+`codex_795_800.jsonl` → `codex_797_800.jsonl` olarak yeniden adlandırıldı.
+
+Şimdi Codex tarafında **298 satır / 298 benzersiz slot** var. Eksik iki slot
+Codex genel sıra 774 (`raw_00947`) ve 796 (`raw_00991`). Bunlar üretilmeden
+Codex 300 tamamlandı denmez. Diğer erken dönem Codex dosyalarının bazı adları
+(642–658) içerik sırasıyla birebir eşleşmese de slot ID'leri tekildir;
+`shared-sync` gerçek plan/slot ID üzerinden doğrulama yapar.
+
+Opus 5.5 run'ında `shared-sync` 298 Codex + 90 Claude = 388 kayıtla geçmiştir.
+Kalan 212 slot: 2 Codex + 210 Claude. Bu, son üretimin tamamlandığı anlamına
+gelmez; insan kontrolü ayrıca yapılacaktır.
 
 ## Claude üretimine hazırlık
 
-Codex shard çakışması/eksikleri düzeltildikten sonra her makinede aynı config ve
-run ID kullanılır:
+Codex çakışması giderildi; eksik iki slot görünür kalacak şekilde her makinede
+aynı config ve run ID kullanılır:
 
 ```bash
 python3 -m test --config test/config_v2_extension_opus55.json plan --run-id extension_v41_opus55
