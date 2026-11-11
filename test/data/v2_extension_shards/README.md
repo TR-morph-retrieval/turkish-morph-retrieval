@@ -15,7 +15,9 @@ Dosya numaraları V1'in ardından devam eden **genel family sırasıdır**; V2 p
 Önceden 616–705 olarak adlandırılmış altı Claude shard'ı, içerikleri değiştirilmeden
 916–1005 adlarına taşındı. Bu 90 satırın tamamı plandaki Claude slot sırasıyla
 eşleşiyor ve provenance'da istenen/gerçek model `claude-opus-5-5` görünüyor.
-İlk 901–915 aralığı henüz bu depoda yok; ayrıca tamamlanmalıdır.
+İlk 901–915 aralığı henüz bu depoda yok; ayrıca tamamlanmalıdır. Sonradan
+eklenen ve planın 1006–1020 sırasına denk gelen Claude shard'ı da doğru genel
+numaraya taşındı.
 
 Claude için V2'de yeni numaralandırma 1'den başlamaz. Üretim planında `generator_a`
 Codex'e, `generator_b` Claude'a karşılık gelir; her biri aynı 600-slotluk plandaki
@@ -63,8 +65,8 @@ Codex tarafında artık **300 satır / 300 benzersiz slot** var. Diğer erken d�
 (642–658) içerik sırasıyla birebir eşleşmese de slot ID'leri tekildir;
 `shared-sync` gerçek plan/slot ID üzerinden doğrulama yapar.
 
-Opus 5.5 run'ında `shared-sync` 300 Codex + 90 Claude = 390 kayıtla geçmiştir.
-Kalan 210 slotun tamamı Claude tarafındadır. Bu, son üretimin tamamlandığı anlamına
+Opus 5.5 run'ında `shared-sync` 300 Codex + 105 Claude = 405 kayıtla geçmiştir.
+Kalan 195 slotun tamamı Claude tarafındadır. Bu, son üretimin tamamlandığı anlamına
 gelmez; insan kontrolü ayrıca yapılacaktır.
 
 ## Claude üretimine hazırlık
@@ -81,9 +83,9 @@ python3 -m test --config test/config_v2_extension_opus55.json shard-export --run
 ```
 
 Her batch'te Claude sıra başlangıcı `N` ise `--offset N-901` ve çıktı adı
-`claude_N_(N+14).jsonl` olur. Mevcut 916–1005 shard'ları yeniden üretilmez.
-İlk eksik 901–915 tamamlandıktan sonraki boş aralık 1006–1020'dir
-(`--offset 105`). Her batch'ten önce güncel shard'lar pull/sync edilir.
+`claude_N_(N+14).jsonl` olur. Mevcut 916–1020 shard'ları yeniden üretilmez.
+İlk eksik 901–915 tamamlandıktan sonraki boş aralık 1021–1035'tir
+(`--offset 120`). Her batch'ten önce güncel shard'lar pull/sync edilir.
 `range-run` komutu eski V1
 `final_shards` sözleşmesine bağlıdır; bu V2 uzantısı için yukarıdaki açık
 `generate` + `shard-export` akışı kullanılır.
