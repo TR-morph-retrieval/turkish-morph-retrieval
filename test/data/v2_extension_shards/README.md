@@ -44,8 +44,8 @@ insan kontrollü dosya kullanılır. Run'ın kendi üretilmiş metadata'sı ayr�
 Opus 5.5 için yeni run açılmasının nedeni, mevcut manifestin generator modelini ve
 config hash'ini sabitlemesidir. Modeli aynı run içinde değiştirmek sözleşme hatası
 verir. Yeni config yalnız Claude modelini değiştirir; slot planı ve Codex modeli
-aynı kalır. Codex shard'ları aşağıdaki çakışma giderildikten sonra yeni run'a
-senkronlanmalı, ardından Claude kolu üretilmelidir. Eski shard'ların provenance'ı
+aynı kalır. Codex shard'ları çakışma giderildikten sonra yeni run'a
+senkronlanmıştır. Eski shard'ların provenance'ı
 değiştirilmez; yeni Claude kayıtlarının gerçek model kimliği provenance'da
 `claude-opus-5-5` olarak doğrulanmalıdır.
 
@@ -58,15 +58,18 @@ shard'dan çıkarıldı. Önceki sürümler Git geçmişindeki `5af02d9` commit'
 `codex_795_800.jsonl` dosyasında (5–6. satırlar) geri alınabilir. İçerik
 aralıkları doğrulanarak `codex_774_794.jsonl` → `codex_775_795.jsonl`, kalan
 `codex_795_800.jsonl` → `codex_797_800.jsonl` olarak yeniden adlandırıldı.
+Eski Codex `642–658` dosyalarının beşli grubu da içerik/plan eşleşmesine göre
+`codex_642_644`, `codex_645_649`, `codex_650_652`, `codex_653_655` ve
+`codex_656_658` adlarıyla düzeltildi.
 
 Codex genel sıra 774 (`raw_00947`) ve 796 (`raw_00991`) aynı `extension_v40`
 GPT-5.6 Sol üretim/hakem hattında tamamlanıp tekli shard'lar olarak eklendi.
-Codex tarafında artık **300 satır / 300 benzersiz slot** var. Diğer erken dönem Codex dosyalarının bazı adları
-(642–658) içerik sırasıyla birebir eşleşmese de slot ID'leri tekildir;
-`shared-sync` gerçek plan/slot ID üzerinden doğrulama yapar.
+Codex tarafında artık **300 satır / 300 benzersiz slot** var ve shard dosya
+numaraları plan slotlarıyla hizalıdır. `shared-sync` gerçek plan/slot ID üzerinden
+doğrular.
 
-Opus 5.5 run'ında `shared-sync` 300 Codex + 105 Claude = 405 kayıtla geçmiştir.
-Kalan 195 slotun tamamı Claude tarafındadır. Bu, son üretimin tamamlandığı anlamına
+Opus 5.5 run'ında `shared-sync` 300 Codex + 285 Claude = 585 kayıtla geçmiştir.
+Yalnız Claude **901–915** aralığı (15 slot) eksiktir. Bu, son üretimin tamamlandığı anlamına
 gelmez; insan kontrolü ayrıca yapılacaktır.
 
 ## Claude üretimine hazırlık
