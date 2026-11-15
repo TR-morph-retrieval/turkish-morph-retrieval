@@ -17,3 +17,6 @@ test/runs/
 
 # Provider response cache lives inside the ignored private run state.
 test/runs/*/cache/
+
+# Scratch workspace
+scratch/
