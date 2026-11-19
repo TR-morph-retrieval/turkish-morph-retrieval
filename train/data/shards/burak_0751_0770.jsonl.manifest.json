@@ -28,7 +28,7 @@
     "train_000769",
     "train_000770"
   ],
-  "shard_sha256": "2e27aae6a18732805a6880948dc7fc79ad197a530d324bbb9cebd65ed1c7ff3f",
+  "shard_sha256": "030c7104d0a7db21eb41d01a49d185e09cd1930b8226548b9dfe4500558d79ca",
   "run_contract": {
     "contract_sha256": "20b4c81826831fd1a0c5a4e1ac675ed5f4063b1b2ab68225e21a8f9b3c5b3854",
     "config": "train-v26-drift-aware-review"
