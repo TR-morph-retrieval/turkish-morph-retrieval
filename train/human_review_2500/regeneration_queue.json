@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "run_id": "train1250",
+  "purpose": "Human-review records excluded from final training and awaiting regeneration",
+  "assigned_producer": "burak",
+  "status": "pending",
+  "instructions": [
+    "Regenerate each listed slot using its existing train1250 plan/spec and current generator/judge workflow.",
+    "Do not alter run configuration, assignment ranges, or sealed test data.",
+    "Replace the excluded shard row only after the regenerated family passes the normal judge and policy gates; refresh that shard's checksum manifest.",
+    "Keep the prior human-review decision and this queue entry as provenance until the replacement is verified."
+  ],
+  "slots": [
+    {"slot_id":"train_000165","reviewer":"burak","review_decision":"reject","reason":"Positive 'panjurda' yerine 'elekte' kullanıyor; olay alakasızlaştı, gold güvenilir değil. MO2 'eleğe çalışırken' de bozuk."},
+    {"slot_id":"train_000575","reviewer":"burak","review_decision":"reject","reason":"Query dilbilgisel olarak bozuk ('…gerektiğini bizce doğru bir karardır şeklinde açıkladı'); positive da aynı kalıpta. Güvenilir düzeltme yok."},
+    {"slot_id":"train_000713","reviewer":"burak","review_decision":"reject","reason":"'losyonluk set/paket' doğal Türkçe değil; MO1/MO2 'losyonluklar/losyonlar paketleri' de bozuk."},
+    {"slot_id":"train_000755","reviewer":"burak","review_decision":"reject","reason":"Positive 'olukta' yerine 'elekte' (madeni paralar elekte biriktiriliyor) anlamsız; MO1/MO2 de doğal değil."},
+    {"slot_id":"train_000774","reviewer":"burak","review_decision":"reject","reason":"Query ('şamandıraya yöneltilen sermaye') ve positive ('değer kazanan pergel') anlamsız; aile kurtarılamaz."},
+    {"slot_id":"train_001062","reviewer":"murat","review_decision":"reject","reason":"Kök 'uzlaş-' Türkçede kalıplaşmış işteş fiil olup tek taraflı tabanı ('uzlamak') mevcut değildir; M1'deki 'uzladılar' yapay/bozuktur, M2 ise yalnızca olumsuzluk değiştirmektedir. Kök uyumsuzluğu ve yapay biçimler nedeniyle güvenilir biçimde düzeltilemez."},
+    {"slot_id":"train_001077","reviewer":"burak","review_decision":"reject","reason":"Positive çatlağı kirişten çınara taşıyor; olay değişti, gold yanlış."},
+    {"slot_id":"train_001088","reviewer":"burak","review_decision":"reject","reason":"'Zımparaladığım/kazıdığım yara yeri' anlamsız; query ve positive güvenilir değil."},
+    {"slot_id":"train_001089","reviewer":"burak","review_decision":"reject","reason":"Query 'metal levhayı perona yerleştirmek' anlamsız, positive lemma'yı 'çerçeve' yapmış; MO1/MO2 de doğal değil."},
+    {"slot_id":"train_001092","reviewer":"burak","review_decision":"reject","reason":"Hedef CVB.AND ama query'de -ip yok ('temizledim ve'); positive farklı olay ('deterjanla köpürtüp … monte ettim')."},
+    {"slot_id":"train_001302","reviewer":"burak","review_decision":"reject","reason":"Query'deki 'tansiyonun' 2SG okunmuyor; hedef özellik fiilen yok. MO1 'tansiyonunun' sarkık tamlayan üretiyor."},
+    {"slot_id":"train_001381","reviewer":"burak","review_decision":"reject","reason":"'dizindeki' 2SG/3SG belirsiz; MO2 'onun dizindeki' positive ile aynı biçim. Negatifler ayrıca repair öncesi tabana dayanıyor (içerik kayması)."},
+    {"slot_id":"train_001615","reviewer":"murat","review_decision":"fix","reason":"Uygulanan Morph_2 düzeltmesi hedef lemma/olayı korumuyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."},
+    {"slot_id":"train_001668","reviewer":"murat","review_decision":"fix","reason":"Uygulanan Morph_2 düzeltmesi pozitif adayla hedef lemma/olayı paylaşmıyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."}
+  ]
+}
