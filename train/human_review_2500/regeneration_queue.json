@@ -11,19 +11,191 @@
     "Keep the prior human-review decision and this queue entry as provenance until the replacement is verified."
   ],
   "slots": [
-    {"slot_id":"train_000165","reviewer":"burak","review_decision":"reject","reason":"Positive 'panjurda' yerine 'elekte' kullanıyor; olay alakasızlaştı, gold güvenilir değil. MO2 'eleğe çalışırken' de bozuk."},
-    {"slot_id":"train_000575","reviewer":"burak","review_decision":"reject","reason":"Query dilbilgisel olarak bozuk ('…gerektiğini bizce doğru bir karardır şeklinde açıkladı'); positive da aynı kalıpta. Güvenilir düzeltme yok."},
-    {"slot_id":"train_000713","reviewer":"burak","review_decision":"reject","reason":"'losyonluk set/paket' doğal Türkçe değil; MO1/MO2 'losyonluklar/losyonlar paketleri' de bozuk."},
-    {"slot_id":"train_000755","reviewer":"burak","review_decision":"reject","reason":"Positive 'olukta' yerine 'elekte' (madeni paralar elekte biriktiriliyor) anlamsız; MO1/MO2 de doğal değil."},
-    {"slot_id":"train_000774","reviewer":"burak","review_decision":"reject","reason":"Query ('şamandıraya yöneltilen sermaye') ve positive ('değer kazanan pergel') anlamsız; aile kurtarılamaz."},
-    {"slot_id":"train_001062","reviewer":"murat","review_decision":"reject","reason":"Kök 'uzlaş-' Türkçede kalıplaşmış işteş fiil olup tek taraflı tabanı ('uzlamak') mevcut değildir; M1'deki 'uzladılar' yapay/bozuktur, M2 ise yalnızca olumsuzluk değiştirmektedir. Kök uyumsuzluğu ve yapay biçimler nedeniyle güvenilir biçimde düzeltilemez."},
-    {"slot_id":"train_001077","reviewer":"burak","review_decision":"reject","reason":"Positive çatlağı kirişten çınara taşıyor; olay değişti, gold yanlış."},
-    {"slot_id":"train_001088","reviewer":"burak","review_decision":"reject","reason":"'Zımparaladığım/kazıdığım yara yeri' anlamsız; query ve positive güvenilir değil."},
-    {"slot_id":"train_001089","reviewer":"burak","review_decision":"reject","reason":"Query 'metal levhayı perona yerleştirmek' anlamsız, positive lemma'yı 'çerçeve' yapmış; MO1/MO2 de doğal değil."},
-    {"slot_id":"train_001092","reviewer":"burak","review_decision":"reject","reason":"Hedef CVB.AND ama query'de -ip yok ('temizledim ve'); positive farklı olay ('deterjanla köpürtüp … monte ettim')."},
-    {"slot_id":"train_001302","reviewer":"burak","review_decision":"reject","reason":"Query'deki 'tansiyonun' 2SG okunmuyor; hedef özellik fiilen yok. MO1 'tansiyonunun' sarkık tamlayan üretiyor."},
-    {"slot_id":"train_001381","reviewer":"burak","review_decision":"reject","reason":"'dizindeki' 2SG/3SG belirsiz; MO2 'onun dizindeki' positive ile aynı biçim. Negatifler ayrıca repair öncesi tabana dayanıyor (içerik kayması)."},
-    {"slot_id":"train_001615","reviewer":"murat","review_decision":"fix","reason":"Uygulanan Morph_2 düzeltmesi hedef lemma/olayı korumuyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."},
-    {"slot_id":"train_001668","reviewer":"murat","review_decision":"fix","reason":"Uygulanan Morph_2 düzeltmesi pozitif adayla hedef lemma/olayı paylaşmıyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."}
+    {
+      "slot_id": "train_000017",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "Mandalsız ve çengelsiz aynı özellik değil sanki  “çengelsizce” de bu kullanımda bozuk"
+    },
+    {
+      "slot_id": "train_000138",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "Örs dövme aracı değil bu dovdükleri şeyin adı olması lazım çekiçle değiştirince hedef hal farkı bozuluyor"
+    },
+    {
+      "slot_id": "train_000146",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Şef çantası” sahipliği net biçimde dışlamıyor gene sahiplik oluyor bence karşıtlık güvenilir değil."
+    },
+    {
+      "slot_id": "train_000165",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Positive 'panjurda' yerine 'elekte' kullanıyor; olay alakasızlaştı, gold güvenilir değil. MO2 'eleğe çalışırken' de bozuk."
+    },
+    {
+      "slot_id": "train_000174",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "Positive hatırlatmayı farklı bir olaya çeviriyor taktirle anlatmak ile hatırlattı falan sanki tam olmamış pozitif, edilgen negatif de anlamsız."
+    },
+    {
+      "slot_id": "train_000390",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Bizce/bizde/bizden” karşıtlığı diğer sözcükleri değiştirmeden doğal kurulamıyor gibi "
+    },
+    {
+      "slot_id": "train_000481",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Müdür masası” aynı masayı gösterebilir; sahiplik farkı güvenilir değil. ya bunun gibi bir tane daha vardı shaiplik farkını çok iyi veremiyoruz gibi"
+    },
+    {
+      "slot_id": "train_000575",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Query dilbilgisel olarak bozuk ('…gerektiğini bizce doğru bir karardır şeklinde açıkladı'); positive da aynı kalıpta. Güvenilir düzeltme yok."
+    },
+    {
+      "slot_id": "train_000680",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "ne alaka ilk negatif hiç anlamadım İlk negatif dil bilgisel açıdan bozuk; ikisi de aynı morfolojik ayrımı sınamıyor."
+    },
+    {
+      "slot_id": "train_000713",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "'losyonluk set/paket' doğal Türkçe değil; MO1/MO2 'losyonluklar/losyonlar paketleri' de bozuk."
+    },
+    {
+      "slot_id": "train_000716",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "gene burda da sanki sahiplik kısmında sıkıntı var gibi"
+    },
+    {
+      "slot_id": "train_000755",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Positive 'olukta' yerine 'elekte' (madeni paralar elekte biriktiriliyor) anlamsız; MO1/MO2 de doğal değil."
+    },
+    {
+      "slot_id": "train_000774",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Query ('şamandıraya yöneltilen sermaye') ve positive ('değer kazanan pergel') anlamsız; aile kurtarılamaz."
+    },
+    {
+      "slot_id": "train_000844",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Cilaladığı teknisyen” kim tarafından cilalandı belirsiz; yapısal karşıtlık temiz değil."
+    },
+    {
+      "slot_id": "train_000898",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "Bizden adil bir yöntemle tuhaf duruyor bence doğal değil ya"
+    },
+    {
+      "slot_id": "train_000972",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Hisse senedi müşteridir” anlamsız anlamadım çok,  ikinci negatif de sahipliği karşılamıyor bence "
+    },
+    {
+      "slot_id": "train_001062",
+      "reviewer": "murat",
+      "review_decision": "reject",
+      "reason": "Kök 'uzlaş-' Türkçede kalıplaşmış işteş fiil olup tek taraflı tabanı ('uzlamak') mevcut değildir; M1'deki 'uzladılar' yapay/bozuktur, M2 ise yalnızca olumsuzluk değiştirmektedir. Kök uyumsuzluğu ve yapay biçimler nedeniyle güvenilir biçimde düzeltilemez."
+    },
+    {
+      "slot_id": "train_001074",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Fiyat sabitledi/sabitlediler” özne yüklem uyumsuz türkçe YKS özne değişmeden etkenleşmez !!!!!!!!"
+    },
+    {
+      "slot_id": "train_001077",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Positive çatlağı kirişten çınara taşıyor; olay değişti, gold yanlış."
+    },
+    {
+      "slot_id": "train_001084",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Lambanın düğmem/düğmemiz” tamlaması bozuk ykssssss türkçeeeee"
+    },
+    {
+      "slot_id": "train_001088",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "'Zımparaladığım/kazıdığım yara yeri' anlamsız; query ve positive güvenilir değil."
+    },
+    {
+      "slot_id": "train_001089",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Query 'metal levhayı perona yerleştirmek' anlamsız, positive lemma'yı 'çerçeve' yapmış; MO1/MO2 de doğal değil."
+    },
+    {
+      "slot_id": "train_001092",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Hedef CVB.AND ama query'de -ip yok ('temizledim ve'); positive farklı olay ('deterjanla köpürtüp … monte ettim')."
+    },
+    {
+      "slot_id": "train_001256",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Kaptan rotası” kaptanın rotasına da işaret edebilir  “kaptanca rota” doğal değil "
+    },
+    {
+      "slot_id": "train_001302",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "Query'deki 'tansiyonun' 2SG okunmuyor; hedef özellik fiilen yok. MO1 'tansiyonunun' sarkık tamlayan üretiyor."
+    },
+    {
+      "slot_id": "train_001351",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Cerrahı karşılaştıran yönerge” anlamsız morfolojik hedef doğal karşılanmıyor"
+    },
+    {
+      "slot_id": "train_001381",
+      "reviewer": "burak",
+      "review_decision": "reject",
+      "reason": "'dizindeki' 2SG/3SG belirsiz; MO2 'onun dizindeki' positive ile aynı biçim. Negatifler ayrıca repair öncesi tabana dayanıyor (içerik kayması)."
+    },
+    {
+      "slot_id": "train_001387",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Şahsım ... denetledim” özne yüklem uyumsz iki negatif de bozuk."
+    },
+    {
+      "slot_id": "train_001615",
+      "reviewer": "murat",
+      "review_decision": "fix",
+      "reason": "Uygulanan Morph_2 düzeltmesi hedef lemma/olayı korumuyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."
+    },
+    {
+      "slot_id": "train_001668",
+      "reviewer": "murat",
+      "review_decision": "fix",
+      "reason": "Uygulanan Morph_2 düzeltmesi pozitif adayla hedef lemma/olayı paylaşmıyor; otomatik tutarlılık kontrolü nedeniyle yeniden üretime alındı."
+    },
+    {
+      "slot_id": "train_001671",
+      "reviewer": "emir",
+      "review_decision": "reject",
+      "reason": "“Rehber ikazı” yine aynı rehberin uyarısı olabilir ayırt edici negatif değil."
+    }
   ]
 }
